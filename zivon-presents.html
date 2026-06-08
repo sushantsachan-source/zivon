@@ -1,0 +1,662 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Zivon presents — Aura</title>
+<style>
+  :root{
+    --bg0:#070b16; --bg1:#0d1426;
+    --eye:#27e0ff; --eye-soft:#9af4ff;
+    --accent:#34f5c8; --warn:#ff5d6c;
+    --panel:rgba(14,22,44,.72); --stroke:rgba(120,180,255,.18);
+    --txt:#dce8ff; --muted:#7f93bd;
+    --body0:#ffffff; --body1:#eef3fb; --body2:#c4d2e6; --body3:#9fb1cd;
+    --bodyrim:#ffffff;
+    --visor0:#1b2334; --visor1:#0a0e18; --visor2:#04060c;
+    --sheen:#5e7bb0;
+    --hand0:#ffffff; --hand1:#e4ebf6; --hand2:#a9bad4;
+    --shellStroke:#aebccf; --seam:#bccadd; --visorBorder:#33425f;
+    --emblemDisc:#0c1322; --eyelid:#0a0e18; --handStroke:#9fb1cd; --metal:#aebfd8;
+  }
+  *{box-sizing:border-box;}
+  html,body{height:100%;margin:0;}
+  body{
+    font-family:"Segoe UI",system-ui,-apple-system,sans-serif; color:var(--txt);
+    background:
+      radial-gradient(1200px 800px at 18% -10%, #16234a 0%, transparent 60%),
+      radial-gradient(900px 700px at 92% 110%, #102a2e 0%, transparent 55%),
+      linear-gradient(180deg,var(--bg0),var(--bg1) 55%,#05080f);
+    min-height:100%; display:flex; flex-direction:column; overflow-x:hidden;
+  }
+  .stars{position:fixed; inset:0; z-index:0; pointer-events:none; overflow:hidden;}
+  .stars i{position:absolute; width:2px; height:2px; border-radius:50%;
+    background:rgba(150,200,255,.7); animation:rise linear infinite;}
+  @keyframes rise{from{transform:translateY(110vh) scale(.6);opacity:0}
+    10%{opacity:.8} 90%{opacity:.8} to{transform:translateY(-10vh) scale(1.1);opacity:0}}
+
+  header{z-index:2; padding:18px 26px 6px; display:flex; align-items:baseline; gap:14px; flex-wrap:wrap;}
+  header .brand{font-size:20px; letter-spacing:.22em; font-weight:700;
+    background:linear-gradient(90deg,#8fdcff,#34f5c8); -webkit-background-clip:text; background-clip:text; color:transparent;}
+  header .sub{color:var(--muted); font-size:13px; letter-spacing:.04em;}
+  header .sub b{color:var(--eye-soft); font-weight:600;}
+
+  .wrap{position:relative; z-index:1; flex:1 1 auto; display:flex; gap:24px;
+    padding:8px 26px 26px; min-height:0;}
+
+  /* ---- presenter (left) ---- */
+  .presenter{flex:0 0 clamp(320px,30vw,420px); display:flex; flex-direction:column;
+    align-items:center; justify-content:center; gap:6px; min-width:0;}
+  .bubble{position:relative; max-width:380px; background:var(--panel); border:1px solid var(--stroke);
+    border-radius:16px; padding:14px 18px; font-size:15px; line-height:1.45; color:var(--txt);
+    backdrop-filter:blur(8px); box-shadow:0 14px 40px rgba(0,0,0,.45);
+    opacity:0; transform:translateY(6px); transition:opacity .3s, transform .3s; min-height:0;}
+  .bubble.show{opacity:1; transform:none;}
+  .bubble::after{content:""; position:absolute; left:50%; bottom:-9px; transform:translateX(-50%) rotate(45deg);
+    width:16px; height:16px; background:var(--panel); border-right:1px solid var(--stroke); border-bottom:1px solid var(--stroke);}
+  .stage{position:relative; width:min(330px,80%); margin-top:4px;}
+  .floor{position:absolute; left:50%; bottom:30px; transform:translateX(-50%);
+    width:200px; height:34px; border-radius:50%;
+    background:radial-gradient(ellipse at center, rgba(39,224,255,.30), rgba(39,224,255,0) 70%); filter:blur(3px);}
+  svg#zivon{display:block; width:100%; height:auto; overflow:visible; position:relative; z-index:1;}
+  .controls{display:flex; gap:10px; flex-wrap:wrap; justify-content:center; margin-top:2px;}
+  button{font:inherit; cursor:pointer; color:var(--txt); border-radius:11px; border:1px solid var(--stroke);
+    background:rgba(30,44,82,.55); padding:11px 16px; font-size:14px; letter-spacing:.02em; transition:.18s;}
+  button:hover{transform:translateY(-2px); border-color:rgba(120,180,255,.45);}
+  button.play{font-weight:600; background:linear-gradient(180deg,rgba(52,245,200,.30),rgba(39,224,255,.16));
+    border-color:rgba(52,245,200,.55);}
+  button.play.on{animation:pulse 1.1s ease-in-out infinite;}
+  @keyframes pulse{0%,100%{box-shadow:0 0 0 rgba(52,245,200,0)}50%{box-shadow:0 0 18px rgba(52,245,200,.45)}}
+  button.mini{padding:11px 13px; color:var(--muted);}
+  button.mini.on{color:var(--warn); border-color:rgba(255,93,108,.4);}
+
+  /* ---- the deck (right) ---- */
+  .screen{flex:1 1 auto; display:flex; flex-direction:column; min-width:0;}
+  .screenbar{display:flex; align-items:center; gap:10px; padding:0 4px 8px; color:var(--muted); font-size:12px;}
+  .dot{width:10px;height:10px;border-radius:50%;}
+  .dot.r{background:#ff5f57} .dot.y{background:#febc2e} .dot.g{background:#28c840}
+  .screenbar .title{margin-left:6px; color:var(--eye-soft); font-weight:600; letter-spacing:.03em;}
+  .screenbar a{margin-left:auto; color:var(--eye); text-decoration:none; border:1px solid var(--stroke);
+    padding:6px 12px; border-radius:9px; font-weight:600;}
+  .screenbar a:hover{border-color:var(--eye);}
+  .framewrap{flex:1 1 auto; border-radius:16px; overflow:hidden; border:1px solid var(--stroke);
+    background:#0a0f1e; box-shadow:0 24px 70px rgba(0,0,0,.5); position:relative;}
+  iframe#deck{width:100%; height:100%; border:0; display:block; background:#0a0f1e;}
+  .loadnote{position:absolute; inset:0; display:flex; align-items:center; justify-content:center; text-align:center;
+    color:var(--muted); font-size:13px; padding:24px; pointer-events:none;}
+
+  @media (max-width:900px){
+    .wrap{flex-direction:column; padding:8px 16px 20px;}
+    .presenter{flex:0 0 auto;}
+    .stage{width:min(220px,60%);}
+    .framewrap{min-height:62vh;}
+  }
+
+  /* ---- character animation bits ---- */
+  .lidTop,.lidBot{transition:transform .34s cubic-bezier(.4,.0,.2,1); transform-box:view-box;}
+  #blinkL,#blinkR{transition:transform .1s ease; transform-box:fill-box; transform-origin:center;}
+  #mouthLine{transition:opacity .25s, d .3s;}
+  #mouthO{transition:r .25s;}
+  #body{transition:transform .5s cubic-bezier(.34,1.4,.5,1);}
+  #mouthBars{transform-box:fill-box; transform-origin:center;}
+  #mouthBars rect{transform-box:fill-box; transform-origin:center;}
+  #mouthBars.talking rect{animation:eq .5s ease-in-out infinite;}
+  #mouthBars.talking rect:nth-child(1){animation-delay:0s}
+  #mouthBars.talking rect:nth-child(2){animation-delay:.12s}
+  #mouthBars.talking rect:nth-child(3){animation-delay:.06s}
+  #mouthBars.talking rect:nth-child(4){animation-delay:.18s}
+  #mouthBars.talking rect:nth-child(5){animation-delay:.09s}
+  @keyframes eq{0%,100%{transform:scaleY(.4)}50%{transform:scaleY(1.3)}}
+  .handInner{transition:transform .45s cubic-bezier(.34,1.3,.5,1); transform-box:fill-box; transform-origin:center;}
+  .hand{transform-box:view-box;}
+  #handL{transform:translate(86px,300px);} #handR{transform:translate(374px,300px);}
+  #handL .handInner{transform:translateY(var(--bob,0));}
+  #handR .handInner{transform:translateY(var(--bob,0));}
+  .g-wave .handInner{animation:wave 1s ease-in-out infinite;}
+  @keyframes wave{0%,100%{transform:translateY(-26px) rotate(-18deg)}50%{transform:translateY(-30px) rotate(22deg)}}
+  .g-cheer .handInner{animation:cheer .7s ease-in-out infinite;}
+  @keyframes cheer{0%,100%{transform:translateY(-34px) rotate(-12deg)}50%{transform:translateY(-46px) rotate(12deg)}}
+  #handL.g-think .handInner{transform:translate(34px,-58px) rotate(20deg);}
+  #handR.g-think .handInner{transform:translateY(8px);}
+  #handL.g-present .handInner{transform:translate(14px,16px) rotate(-22deg);}
+  #handR.g-present .handInner{transform:translate(2px,10px) rotate(8deg);}
+  .g-up .handInner{transform:translateY(-54px);}
+  .g-down .handInner{transform:translateY(30px) rotate(0);}
+
+  /* ---- SpeakX (orange) brand theme — toggle to match the deck ---- */
+  :root.speakx{
+    --eye:#facc15; --eye-soft:#ffe9a8; --accent:#ff4d00; --warn:#ef4444;
+    --panel:rgba(38,16,6,.78); --stroke:rgba(255,120,16,.22); --txt:#ffe9dd; --muted:#cf9a7e;
+    --body0:#ffd9c6; --body1:#ff7810; --body2:#ff4d00; --body3:#cc2500; --bodyrim:#fff4f0;
+    --visor0:#2a1410; --visor1:#150805; --visor2:#0a0402; --sheen:#b07a4a;
+    --hand0:#ffd9c6; --hand1:#ff7a2e; --hand2:#cc2500;
+    --shellStroke:#d23b0a; --seam:#ff7810; --visorBorder:#5a2a14;
+    --emblemDisc:#1c0a04; --eyelid:#1a0903; --handStroke:#cc2500; --metal:#ff7810;
+  }
+  .speakx body{ background:
+    radial-gradient(1200px 800px at 18% -10%, #4a2008 0%, transparent 60%),
+    radial-gradient(900px 700px at 92% 110%, #3a1505 0%, transparent 55%),
+    linear-gradient(180deg,#170a04,#241007 55%,#0a0502); }
+  .speakx .stars i{ background:rgba(255,200,150,.7); }
+  .speakx header .brand{ background:linear-gradient(90deg,#ffd27a,#ff7a2f); -webkit-background-clip:text; background-clip:text; }
+  .speakx .floor{ background:radial-gradient(ellipse at center, rgba(255,90,20,.32), rgba(255,90,20,0) 70%); }
+
+  /* ---- transport + settings ---- */
+  .progress{margin-top:8px; font-size:11px; letter-spacing:.12em; color:var(--muted); text-transform:uppercase;}
+  .settings{display:flex; gap:14px; flex-wrap:wrap; justify-content:center; align-items:center;
+    margin-top:10px; font-size:12px; color:var(--muted);}
+  .settings label{display:inline-flex; align-items:center; gap:7px;}
+  .settings select{font:inherit; font-size:12px; color:var(--txt); max-width:150px;
+    background:rgba(8,13,28,.85); border:1px solid var(--stroke); border-radius:9px; padding:5px 8px;}
+  .settings input[type=range]{accent-color:var(--accent); width:92px;}
+
+  /* ---- Ask Zivon ---- */
+  .ask{display:flex; gap:8px; margin-top:12px; width:min(390px,92%);}
+  .ask input{flex:1; min-width:0; font:inherit; font-size:13px; color:var(--txt); background:rgba(8,13,28,.85);
+    border:1px solid var(--stroke); border-radius:10px; padding:9px 12px;}
+  .ask input:focus{outline:none; border-color:var(--accent);}
+  #micBtn.on{color:var(--accent); border-color:var(--accent); animation:pulse 1s ease-in-out infinite;}
+
+  /* ---- highlight ring Zivon aims at on the deck ---- */
+  #deckPointer{position:fixed; left:0; top:0; width:54px; height:54px; margin:-27px 0 0 -27px;
+    border:2px solid var(--eye); border-radius:50%; z-index:40; pointer-events:none;
+    box-shadow:0 0 18px var(--eye), inset 0 0 12px rgba(255,255,255,.15);
+    opacity:0; transform:scale(.6);
+    transition:opacity .3s, transform .3s, left .55s cubic-bezier(.3,.8,.2,1), top .55s cubic-bezier(.3,.8,.2,1);}
+  #deckPointer.on{opacity:.85; transform:scale(1); animation:ringpulse 1.6s ease-in-out infinite;}
+  @keyframes ringpulse{0%,100%{box-shadow:0 0 14px var(--eye)}50%{box-shadow:0 0 28px var(--eye)}}
+
+  @media (prefers-reduced-motion: reduce){
+    .stars i{animation:none !important;}
+    #deckPointer.on{animation:none !important;}
+    .handInner, .g-wave .handInner, .g-cheer .handInner{animation:none !important;}
+  }
+</style>
+</head>
+<body>
+<div class="stars" id="stars"></div>
+
+<header>
+  <span class="brand">Z I V O N</span>
+  <span class="sub">presents · <b>Aura</b> — your whole company, one conversation</span>
+</header>
+
+<div class="wrap">
+  <!-- ===================== PRESENTER ===================== -->
+  <div class="presenter">
+    <div class="bubble" id="bubble" role="status" aria-live="polite"></div>
+    <div class="stage">
+      <div class="floor"></div>
+      <svg id="zivon" viewBox="0 0 460 560" aria-label="Zivon robot">
+        <defs>
+          <radialGradient id="bodyGrad" cx="38%" cy="30%" r="80%">
+            <stop offset="0%"  stop-color="var(--body0)"/><stop offset="46%" stop-color="var(--body1)"/>
+            <stop offset="78%" stop-color="var(--body2)"/><stop offset="100%" stop-color="var(--body3)"/>
+          </radialGradient>
+          <linearGradient id="bodyRim" x1="0" y1="0" x2="0" y2="1">
+            <stop offset="0%" stop-color="var(--bodyrim)" stop-opacity=".9"/>
+            <stop offset="18%" stop-color="var(--bodyrim)" stop-opacity="0"/>
+          </linearGradient>
+          <radialGradient id="visorGrad" cx="50%" cy="32%" r="75%">
+            <stop offset="0%" stop-color="var(--visor0)"/><stop offset="60%" stop-color="var(--visor1)"/>
+            <stop offset="100%" stop-color="var(--visor2)"/>
+          </radialGradient>
+          <linearGradient id="visorSheen" x1="0" y1="0" x2="0" y2="1">
+            <stop offset="0%" stop-color="var(--sheen)" stop-opacity=".55"/>
+            <stop offset="22%" stop-color="var(--sheen)" stop-opacity="0"/>
+          </linearGradient>
+          <radialGradient id="handGrad" cx="36%" cy="28%" r="85%">
+            <stop offset="0%" stop-color="var(--hand0)"/><stop offset="55%" stop-color="var(--hand1)"/>
+            <stop offset="100%" stop-color="var(--hand2)"/>
+          </radialGradient>
+          <radialGradient id="eyeGlow" cx="50%" cy="42%" r="60%">
+            <stop offset="0%" stop-color="#ffffff"/><stop offset="28%" stop-color="var(--eye-soft)"/>
+            <stop offset="100%" stop-color="var(--eye)"/>
+          </radialGradient>
+          <filter id="glow" x="-120%" y="-120%" width="340%" height="340%">
+            <feGaussianBlur stdDeviation="6" result="b"/><feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge>
+          </filter>
+          <filter id="softGlow" x="-80%" y="-80%" width="260%" height="260%"><feGaussianBlur stdDeviation="9"/></filter>
+          <filter id="bodyShadow" x="-40%" y="-40%" width="180%" height="180%">
+            <feDropShadow dx="0" dy="10" stdDeviation="12" flood-color="#000" flood-opacity=".45"/>
+          </filter>
+          <clipPath id="clipL"><ellipse cx="0" cy="0" rx="18" ry="25"/></clipPath>
+          <clipPath id="clipR"><ellipse cx="0" cy="0" rx="18" ry="25"/></clipPath>
+        </defs>
+        <g id="floatRig">
+          <g id="handL" class="hand"><g class="handInner">
+            <path d="M0,-34 C20,-34 30,-18 30,2 C30,26 18,40 0,40 C-18,40 -30,26 -30,2 C-30,-18 -20,-34 0,-34 Z"
+                  fill="url(#handGrad)" stroke="var(--handStroke)" stroke-width="1.4"/>
+            <path d="M-22,-20 C-10,-30 12,-30 22,-18" fill="none" stroke="#fff" stroke-width="3" stroke-linecap="round" opacity=".7"/>
+            <rect x="-15" y="14" width="30" height="6" rx="3" fill="var(--metal)"/>
+            <circle cx="0" cy="2" r="5.5" fill="var(--accent)" filter="url(#glow)"/>
+          </g></g>
+          <g id="handR" class="hand"><g class="handInner">
+            <path d="M0,-34 C20,-34 30,-18 30,2 C30,26 18,40 0,40 C-18,40 -30,26 -30,2 C-30,-18 -20,-34 0,-34 Z"
+                  fill="url(#handGrad)" stroke="var(--handStroke)" stroke-width="1.4"/>
+            <path d="M-22,-20 C-10,-30 12,-30 22,-18" fill="none" stroke="#fff" stroke-width="3" stroke-linecap="round" opacity=".7"/>
+            <rect x="-15" y="14" width="30" height="6" rx="3" fill="var(--metal)"/>
+            <circle cx="0" cy="2" r="5.5" fill="var(--accent)" filter="url(#glow)"/>
+          </g></g>
+          <g id="body">
+            <g id="antenna">
+              <line x1="230" y1="120" x2="230" y2="86" stroke="var(--metal)" stroke-width="4" stroke-linecap="round"/>
+              <circle id="antTip" cx="230" cy="80" r="7" fill="var(--accent)" filter="url(#glow)"/>
+            </g>
+            <path id="shell" filter="url(#bodyShadow)"
+              d="M230,118 C322,118 352,210 352,300 C352,408 312,470 230,470 C148,470 108,408 108,300 C108,210 138,118 230,118 Z"
+              fill="url(#bodyGrad)" stroke="var(--shellStroke)" stroke-width="1.5"/>
+            <path d="M230,118 C322,118 352,210 352,300 C352,250 320,150 230,150 C140,150 108,250 108,300 C108,210 138,118 230,118 Z" fill="url(#bodyRim)"/>
+            <path d="M150,250 C140,320 150,390 188,440" fill="none" stroke="var(--seam)" stroke-width="2" opacity=".6"/>
+            <path d="M310,250 C320,320 310,390 272,440" fill="none" stroke="var(--seam)" stroke-width="2" opacity=".6"/>
+            <g id="emblem" transform="translate(230,392)">
+              <circle r="20" fill="var(--emblemDisc)" stroke="var(--accent)" stroke-width="1.6" opacity=".9"/>
+              <path d="M-9,-7 H9 L-9,7 H9" fill="none" stroke="var(--accent)" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" filter="url(#glow)"/>
+            </g>
+            <g id="visor" transform="translate(230,232)">
+              <ellipse rx="118" ry="86" fill="url(#visorGrad)"/>
+              <ellipse rx="118" ry="86" fill="none" stroke="var(--visorBorder)" stroke-width="2"/>
+              <ellipse cx="0" cy="-30" rx="96" ry="42" fill="url(#visorSheen)"/>
+              <ellipse id="bloomL" cx="-44" cy="-6" rx="34" ry="42" fill="var(--eye)" opacity=".22" filter="url(#softGlow)"/>
+              <ellipse id="bloomR" cx="44"  cy="-6" rx="34" ry="42" fill="var(--eye)" opacity=".22" filter="url(#softGlow)"/>
+              <g id="eyeL" transform="translate(-44,-6)"><g id="blinkL"><g clip-path="url(#clipL)">
+                <ellipse class="eyeBall" cx="0" cy="0" rx="18" ry="25" fill="url(#eyeGlow)" filter="url(#glow)"/>
+                <rect class="lidTop" x="-22" y="-58" width="44" height="33" fill="var(--eyelid)"/>
+                <rect class="lidBot" x="-22" y="25" width="44" height="33" fill="var(--eyelid)"/>
+              </g><circle class="spark" cx="-5" cy="-9" r="5" fill="#fff"/></g></g>
+              <g id="eyeR" transform="translate(44,-6)"><g id="blinkR"><g clip-path="url(#clipR)">
+                <ellipse class="eyeBall" cx="0" cy="0" rx="18" ry="25" fill="url(#eyeGlow)" filter="url(#glow)"/>
+                <rect class="lidTop" x="-22" y="-58" width="44" height="33" fill="var(--eyelid)"/>
+                <rect class="lidBot" x="-22" y="25" width="44" height="33" fill="var(--eyelid)"/>
+              </g><circle class="spark" cx="-5" cy="-9" r="5" fill="#fff"/></g></g>
+              <g id="mouth" transform="translate(0,52)">
+                <path id="mouthLine" d="M-22,0 Q0,0 22,0" fill="none" stroke="var(--eye)" stroke-width="4.5" stroke-linecap="round" filter="url(#glow)" opacity="0"/>
+                <g id="mouthBars" opacity="0">
+                  <rect x="-26" y="-7" width="5" height="14" rx="2.5" fill="var(--eye)"/>
+                  <rect x="-15" y="-11" width="5" height="22" rx="2.5" fill="var(--eye)"/>
+                  <rect x="-3"  y="-14" width="6" height="28" rx="3" fill="var(--eye)"/>
+                  <rect x="10"  y="-11" width="5" height="22" rx="2.5" fill="var(--eye)"/>
+                  <rect x="21"  y="-7" width="5" height="14" rx="2.5" fill="var(--eye)"/>
+                </g>
+                <circle id="mouthO" cx="0" cy="0" r="0" fill="none" stroke="var(--eye)" stroke-width="4" filter="url(#glow)"/>
+              </g>
+            </g>
+          </g>
+        </g>
+      </svg>
+    </div>
+    <div class="controls">
+      <button class="mini" id="prevBtn" title="Previous line" aria-label="Previous line">⏮</button>
+      <button class="play" id="playBtn">▶ Play</button>
+      <button class="mini" id="nextBtn" title="Next line" aria-label="Next line">⏭</button>
+      <button class="mini" id="restartBtn" title="Restart from slide 1" aria-label="Restart">↻</button>
+      <button class="mini" id="muteBtn" title="Mute Zivon's voice" aria-label="Mute voice">🔊</button>
+    </div>
+    <div class="progress" id="progress">Intro · Aura</div>
+    <div class="settings">
+      <button class="mini" id="themeBtn" title="Match the deck's brand colors">🎨 SpeakX</button>
+      <label>Voice <select id="voiceSel" aria-label="Voice"></select></label>
+      <label>Speed <input id="rate" type="range" min="0.7" max="1.3" step="0.05" value="1" aria-label="Speech speed"></label>
+    </div>
+    <div class="ask">
+      <input id="askInput" type="text" placeholder="Ask Zivon about Aura…" aria-label="Ask Zivon a question">
+      <button class="mini" id="askBtn">Ask</button>
+      <button class="mini" id="micBtn" title="Speak your question (mic)" aria-label="Speak your question">🎤</button>
+    </div>
+  </div>
+
+  <!-- ===================== THE DECK ===================== -->
+  <div class="screen">
+    <div class="screenbar">
+      <span class="dot r"></span><span class="dot y"></span><span class="dot g"></span>
+      <span class="title">Aura — pitch deck</span>
+      <a href="holos-deck-cyan.html" target="_blank" rel="noopener">Open ↗</a>
+    </div>
+    <div class="framewrap">
+      <div class="loadnote" id="loadnote">Loading…</div>
+      <iframe id="deck" title="Aura — by Zivon" src="aura-icon.html?hue=190&bare=1"></iframe>
+    </div>
+  </div>
+</div>
+
+<div id="deckPointer"></div>
+
+<script>
+const $ = s => document.querySelector(s);
+
+/* drifting stars */
+(function(){ const box=$("#stars");
+  for(let i=0;i<44;i++){ const s=document.createElement("i");
+    const dur=9+Math.random()*16; s.style.left=Math.random()*100+"vw";
+    s.style.animationDuration=dur+"s"; s.style.animationDelay=-Math.random()*dur+"s";
+    s.style.transform=`scale(${.5+Math.random()*1.6})`; s.style.opacity=.3+Math.random()*.5; box.appendChild(s);} })();
+
+/* hide the loading note once the iframe loads */
+$("#deck").addEventListener("load",()=>{ const n=$("#loadnote"); if(n) n.style.display="none"; });
+
+/* ---- expression states (trimmed presenter set) ---- */
+const STATES={
+  idle:    {lidTop:.06,lidBot:.06, rot:[0,0],  scale:1,    tilt:0,  mouth:"hidden", hands:"idle",   gaze:0,   track:1},
+  hello:   {lidTop:0,  lidBot:.42, rot:[0,0],  scale:1.05, tilt:-3, mouth:"smile",  hands:"wave",   gaze:0,   track:.6},
+  present: {lidTop:.05,lidBot:.1,  rot:[0,0],  scale:1.06, tilt:3,  mouth:"smile",  hands:"present",gaze:.75, track:.5},
+  talk:    {lidTop:.05,lidBot:.1,  rot:[0,0],  scale:1,    tilt:0,  mouth:"talk",   hands:"present",gaze:.5,  track:.6},
+  curious: {lidTop:.1, lidBot:0,   rot:[-8,6], scale:1.08, tilt:7,  mouth:"flat",   hands:"think",  gaze:.35, track:1},
+  happy:   {lidTop:0,  lidBot:.5,  rot:[0,0],  scale:1.06, tilt:0,  mouth:"smile",  hands:"cheer",  gaze:0,   track:.5},
+  surprise:{lidTop:0,  lidBot:0,   rot:[0,0],  scale:1.3,  tilt:-2, mouth:"o",      hands:"up",     gaze:0,   track:.4},
+  sad:     {lidTop:.42,lidBot:0,   rot:[10,-10],scale:.92, tilt:6,  mouth:"frown",  hands:"down",   gaze:.2,  track:.7},
+};
+const HAND_CLASSES=["g-idle","g-wave","g-cheer","g-think","g-present","g-up","g-down"];
+const HAND_MAP={idle:"g-idle",wave:"g-wave",cheer:"g-cheer",think:"g-think",present:"g-present",up:"g-up",down:"g-down"};
+const handL=$("#handL"), handR=$("#handR"), blinkers=[$("#blinkL"),$("#blinkR")];
+let curState=STATES.idle, gazeBias=0;
+
+function setMouth(mode){
+  const line=$("#mouthLine"), bars=$("#mouthBars"), o=$("#mouthO");
+  line.style.opacity=0; bars.style.opacity=0; o.setAttribute("r",0); bars.classList.remove("talking");
+  if(mode==="smile"){ line.setAttribute("d","M-24,-3 Q0,18 24,-3"); line.style.opacity=1; }
+  else if(mode==="frown"){ line.setAttribute("d","M-24,8 Q0,-12 24,8"); line.style.opacity=1; }
+  else if(mode==="flat"){ line.setAttribute("d","M-18,0 Q0,0 18,0"); line.style.opacity=.9; }
+  else if(mode==="o"){ o.setAttribute("r",13); }
+  else if(mode==="talk"){ bars.style.opacity=1; bars.classList.add("talking"); }
+}
+function setState(k){
+  const s=STATES[k]; if(!s) return; curState=s; gazeBias=s.gaze||0;
+  for(const side of ["L","R"]){ const eye=$("#eye"+side), i=side==="L"?0:1;
+    eye.dataset.rot=s.rot[i]; eye.dataset.scale=s.scale;
+    eye.querySelector(".lidTop").style.transform=`translateY(${s.lidTop*50}px)`;
+    eye.querySelector(".lidBot").style.transform=`translateY(${-s.lidBot*50}px)`; }
+  $("#body").style.transform=`rotate(${s.tilt}deg)`; $("#body").style.transformOrigin="230px 300px";
+  setMouth(s.mouth);
+  for(const h of [handL,handR]){ h.classList.remove(...HAND_CLASSES); h.classList.add(HAND_MAP[s.hands]||"g-idle"); }
+}
+
+/* ---- cursor + gaze ---- */
+const svg=$("#zivon"); let pointer={x:0,y:0};
+const clamp=v=>Math.max(-1,Math.min(1,v));
+function onMove(e){ const r=svg.getBoundingClientRect();
+  const cx=r.left+r.width/2, cy=r.top+r.height*0.42;
+  pointer.x=clamp((e.clientX-cx)/(r.width*0.6)); pointer.y=clamp((e.clientY-cy)/(r.height*0.6)); }
+window.addEventListener("mousemove",onMove);
+
+/* ---- animation loop ---- */
+let t=0,gx=0,gy=0,fx=0,fy=0, speaking=false, speakPulse=0;
+function loop(){
+  t+=0.016; const trk=curState.track??1;
+  const tgx=clamp(pointer.x*trk + gazeBias), tgy=pointer.y*trk;
+  gx+=(tgx-gx)*0.12; gy+=(tgy-gy)*0.12; fx+=(pointer.x-fx)*0.05; fy+=(pointer.y-fy)*0.05;
+  $("#floatRig").setAttribute("transform",`translate(${Math.sin(t*0.7)*3+fx*8}, ${Math.sin(t*1.4)*7}) rotate(${fx*2} 230 300)`);
+  for(const side of ["L","R"]){ const eye=$("#eye"+side); const bx=side==="L"?-44:44;
+    const rot=+(eye.dataset.rot||0), sc=+(eye.dataset.scale||1);
+    eye.setAttribute("transform",`translate(${bx+gx*7}, ${-6+gy*8}) rotate(${rot}) scale(${sc})`);
+    const sp=eye.querySelector(".spark"); sp.setAttribute("cx",-5+gx*7); sp.setAttribute("cy",-9+gy*7); }
+  $("#bloomL").setAttribute("cx",-44+gx*7); $("#bloomL").setAttribute("cy",-6+gy*8);
+  $("#bloomR").setAttribute("cx", 44+gx*7); $("#bloomR").setAttribute("cy",-6+gy*8);
+  $("#antTip").setAttribute("r",6+(0.5+0.5*Math.sin(t*2.2))*2);
+  speakPulse*=0.85; const mb=$("#mouthBars");
+  if(speaking){ const base=0.15+0.15*Math.abs(Math.sin(t*9)); mb.style.transform=`scaleY(${1+base+speakPulse*0.7})`; }
+  else mb.style.transform="";
+  const hb=Math.sin(t*1.4+Math.PI)*5; handL.style.setProperty("--bob",hb+"px"); handR.style.setProperty("--bob",(-hb)+"px");
+  requestAnimationFrame(loop);
+}
+function scheduleBlink(){ setTimeout(()=>{ blinkers.forEach(b=>b.style.transform="scaleY(.08)");
+  setTimeout(()=>blinkers.forEach(b=>b.style.transform="scaleY(1)"),120); scheduleBlink(); }, 1800+Math.random()*3200); }
+
+/* ---- speech (Web Speech API + lip sync) ---- */
+const synth=("speechSynthesis" in window)?speechSynthesis:null;
+let voices=[];
+function fillVoices(){
+  if(!synth) return; voices=synth.getVoices(); const sel=$("#voiceSel"); if(!sel||!voices.length) return;
+  const en=voices.filter(v=>/^en/i.test(v.lang)), rest=voices.filter(v=>!/^en/i.test(v.lang));
+  const prev=sel.value; sel.innerHTML="";
+  [...en,...rest].forEach(v=>{ const o=document.createElement("option"); o.value=v.name;
+    o.textContent=v.name.replace(/^(Microsoft|Google)\s+/,"")+" · "+v.lang; sel.appendChild(o); });
+  const pref=en.find(v=>/Samantha|Ava|Aria|Jenny|Google US English|Natural/i.test(v.name))||en[0]||voices[0];
+  sel.value=(prev && voices.some(v=>v.name===prev)) ? prev : (pref?pref.name:"");
+}
+function pickVoice(){ const sel=$("#voiceSel"), name=sel&&sel.value;
+  return voices.find(v=>v.name===name) || voices.find(v=>/^en/i.test(v.lang)) || voices[0]; }
+if(synth){ fillVoices(); synth.onvoiceschanged=fillVoices; }
+let muted=false;
+
+/* ---- content control: an Aura intro, then the cyan Aura deck slides ---- */
+const deck=$("#deck");
+const deckPointer=$("#deckPointer");
+const clearPointer=()=> deckPointer.classList.remove("on");
+const AURA_SRC="aura-icon.html?hue=190&bare=1", DECK_SRC="holos-deck-cyan.html";
+function auraCmd(cmd){ try{ deck.contentWindow.postMessage({type:"aura", cmd:cmd}, "*"); }catch(e){} }
+function deckGo(n){
+  try{ deck.contentWindow.postMessage({type:"holos-go", n:n}, "*"); }catch(e){}   // works under file://
+  try{ const w=deck.contentWindow; if(w && typeof w.go==="function") w.go(n); }catch(e){}
+}
+let deckMode="aura", deckReady=false;
+/* swap the iframe to the deck (once), then run `after` */
+function ensureDeck(myGen, after){
+  if(deckMode==="deck" && deckReady){ after(); return; }
+  deckMode="deck"; deckReady=false;
+  let fired=false; const go=()=>{ if(fired) return; fired=true; if(myGen!==gen) return; deckReady=true; after(); };
+  deck.addEventListener("load", function onl(){ deck.removeEventListener("load",onl); setTimeout(go,420); });
+  setTimeout(go, 2400);                 // fallback if the load event already fired / is slow
+  deck.src=DECK_SRC;
+}
+/* gaze + highlight ring on the element being discussed (deck phase only) */
+function focusTarget(sel){
+  if(deckMode!=="deck"){ clearPointer(); return; }
+  try{
+    const ddoc=deck.contentWindow.document;
+    const active=[...ddoc.querySelectorAll(".slide")].find(s=>s.classList.contains("active"));
+    if(!active){ clearPointer(); return; }
+    const el=(sel && active.querySelector(sel)) || active.querySelector("h1,h2") || active;
+    const ir=deck.getBoundingClientRect(), er=el.getBoundingClientRect();
+    if(!er.width && !er.height){ clearPointer(); return; }
+    const x=ir.left + Math.min(Math.max(er.left+er.width/2,10), ir.width-10);
+    const y=ir.top  + Math.min(Math.max(er.top +er.height/2,10), ir.height-10);
+    deckPointer.style.left=x+"px"; deckPointer.style.top=y+"px"; deckPointer.classList.add("on");
+    gazeBias=0; onMove({clientX:x, clientY:y});
+  }catch(e){ clearPointer(); }
+}
+
+/* ---- narration: a short Aura intro, then the 13 Aura slides ---- */
+const INTRO=[
+  {aura:true, flare:true, s:"hello",   t:"Hi! I'm Zivon. This is Aura — watch how everything connects.",                  gap:550},
+  {aura:true, flare:true, s:"present", t:"Every point reaches inward and wires itself to one core. That's the whole idea.", gap:650},
+];
+const SLIDES=[
+  /* 1 cover     */ [ {s:"hello",    t:"And that's Aura — your whole company, finally connected in one conversation.", gap:500} ],
+  /* 2 problem   */ [ {s:"curious",  t:"Because today, work is disconnected — a normal day is fifteen separate tabs.", gap:350},
+                      {s:"sad",      t:"Context scatters, answers get buried, and nothing connects end to end.",     gap:400},
+                      {s:"surprise", t:"It's why ninety-five percent of enterprise A-I pilots stall.", target:".big-stat", gap:700} ],
+  /* 3 what      */ [ {s:"happy",    t:"Aura connects it all into one chat to run the company.",                   gap:350},
+                      {s:"present",  t:"Ask, summarise, and act — wired to your live systems, and role-aware.",     gap:650} ],
+  /* 4 shift     */ [ {s:"present",  t:"And it doesn't stop at an answer — it connects the answer to the action.", gap:350},
+                      {s:"happy",    t:"Search points somewhere and ends. Aura carries it through to the next approved step.", gap:650} ],
+  /* 5 caps      */ [ {s:"present",  t:"Everything you do at work, connected in one place.",                       gap:350},
+                      {s:"happy",    t:"Know, assist, do the work, notify, trust — and even speak, by voice.", target:".grid3", gap:650} ],
+  /* 6 glean     */ [ {s:"curious",  t:"So how is this more than search?",                                         gap:350},
+                      {s:"happy",    t:"Search is a library. Aura is the operator — it connects knowing to doing.", target:".panel.holos", gap:650} ],
+  /* 7 moat      */ [ {s:"curious",  t:"And here's the heart of it — not an index, but an operating graph.",       gap:350},
+                      {s:"present",  t:"People, services, policies and metrics, all connected by events, time and permissions.", target:".graphwrap", gap:650} ],
+  /* 8 envoy     */ [ {s:"talk",     t:"The brain already builds — today it writes code and opens pull requests.", gap:350},
+                      {s:"happy",    t:"Aura connects that power to everyone: mobile, the graph, guardrails, every team.", gap:650} ],
+  /* 9 feasible  */ [ {s:"present",  t:"And it's a thin layer over Zivon's existing brain.",                       gap:350},
+                      {s:"happy",    t:"The connections — chat, actions, previews — are feasible today; most is already built.", gap:650} ],
+  /* 10 win      */ [ {s:"present",  t:"We win by connecting the right pieces: buy the substrate, build the execution.", gap:350},
+                      {s:"happy",    t:"Let a commodity layer handle search; we own the graph, approvals and runtime.", gap:650} ],
+  /* 11 phases   */ [ {s:"present",  t:"We connect it in four clear phases.",                                      gap:300},
+                      {s:"talk",     t:"An assistant and the graph, then the agents, then proactive — and finally, Aura Studio.", gap:650} ],
+  /* 12 roadmap  */ [ {s:"curious",  t:"The horizon: from an assistant to your company's operating system.",      gap:350},
+                      {s:"surprise", t:"Agents that don't just connect answers — they own outcomes.",             gap:650} ],
+  /* 13 demo     */ [ {s:"happy",    t:"And finally — Aura, right in your hand. Everything connected, live.", target:".phone-shell", gap:350},
+                      {s:"hello",    t:"One field, one core, one conversation. That's Aura.",                      gap:0} ],
+];
+const SHOW=[]; INTRO.forEach(b=>SHOW.push(b));
+SLIDES.forEach((beats,i)=> beats.forEach((b,j)=> SHOW.push(Object.assign({go:j===0?i:null},b))));
+const slideStart=[]; SHOW.forEach((b,idx)=>{ if(b.go!=null) slideStart[b.go]=idx; });
+
+let pOn=false, paused=false, qi=0, pTimer=null, curBeat=null, curSlide=-1, gen=0;
+const bubble=txt=>{ const b=$("#bubble"); b.textContent=txt||""; b.classList.toggle("show",!!txt); };
+function setPlay(state){ const b=$("#playBtn"); b.classList.toggle("on", state==="playing");
+  b.textContent = state==="playing"?"⏸ Pause" : state==="paused"?"▶ Resume" : state==="done"?"↺ Replay" : "▶ Play"; }
+function updateProgress(){ $("#progress").textContent = curSlide>=0 ? ("Slide "+(curSlide+1)+" / "+SLIDES.length) : "Intro · Aura"; }
+
+function present(){ gen++; clearTimeout(pTimer); if(synth) synth.cancel();
+  pOn=true; paused=false; qi=0; curSlide=-1;
+  deckMode="aura"; deckReady=false; if(deck.getAttribute("src")!==AURA_SRC) deck.src=AURA_SRC;
+  setPlay("playing"); step(); }
+function stopPresent(){ gen++; pOn=false; paused=false; clearTimeout(pTimer); if(synth) synth.cancel();
+  speaking=false; clearPointer(); setState("idle"); bubble(""); setPlay("idle"); }
+function finishPresent(){ gen++; pOn=false; paused=false; clearTimeout(pTimer); speaking=false; clearPointer();
+  setState("happy"); bubble("That's Aura — everything connected, in one conversation. ✨  Now, ask me anything!"); setPlay("done"); updateProgress(); }
+function pausePresent(){ if(!pOn||paused) return; gen++; paused=true; clearTimeout(pTimer); if(synth) synth.cancel();
+  speaking=false; if(curBeat) setMouth(STATES[curBeat.s].mouth); setPlay("paused"); }
+function resumePresent(){ if(!pOn||!paused) return; paused=false; setPlay("playing"); if(curBeat) speakBeat(curBeat); else step(); }
+
+function speakBeat(b){
+  curBeat=b; const myGen=gen;
+  setState(b.s); if(!b.aura) focusTarget(b.target); setMouth("talk"); speaking=true; bubble(b.t);
+  const start=Date.now();
+  const minMs=1050 + b.t.length*38;   // each line stays up long enough to read, even with no audio
+  let done=false;
+  const advance=()=>{ if(myGen!==gen||!pOn||paused) return; speaking=false; setMouth(STATES[b.s].mouth); pTimer=setTimeout(step, b.gap); };
+  const onDone=()=>{ if(done||myGen!==gen||!pOn||paused) return; done=true; pTimer=setTimeout(advance, Math.max(0, minMs-(Date.now()-start))); };
+  let spoke=false;
+  if(synth && !muted){ try{ synth.cancel(); const u=new SpeechSynthesisUtterance(b.t);
+    const v=pickVoice(); if(v) u.voice=v; u.rate=(+($("#rate")&&$("#rate").value))||1; u.pitch=1.12; u.volume=1;
+    u.onboundary=()=>{ speakPulse=1; }; u.onend=onDone; u.onerror=onDone; synth.speak(u); spoke=true; }catch(e){} }
+  pTimer=setTimeout(onDone, spoke? minMs+5000 : minMs);   // hard fallback if speech never reports
+}
+function step(){
+  if(!pOn||paused) return;
+  if(qi>=SHOW.length){ finishPresent(); return; }
+  const b=SHOW[qi++]; const myGen=gen;
+  if(b.aura){ curSlide=-1; updateProgress(); if(b.flare) auraCmd("flare"); speakBeat(b); return; }
+  if(b.go!=null){                                  // first beat of a slide → make sure the deck is up, then navigate
+    curSlide=b.go; updateProgress(); setState("present"); gazeBias=0.75; clearPointer(); bubble("");
+    ensureDeck(myGen, ()=>{ if(myGen!==gen||!pOn||paused) return; deckGo(b.go);
+      pTimer=setTimeout(()=>{ if(myGen===gen && pOn && !paused) speakBeat(b); }, 480); });
+  } else speakBeat(b);
+}
+function jumpToSlide(n){
+  n=Math.max(0,Math.min(SLIDES.length-1,n));
+  gen++; clearTimeout(pTimer); if(synth) synth.cancel(); speaking=false; paused=false; pOn=true;
+  qi=slideStart[n]; setPlay("playing"); step();
+}
+const nextSlide=()=> jumpToSlide((curSlide<0?0:curSlide)+1);
+const prevSlide=()=> jumpToSlide((curSlide<0?0:curSlide)-1);
+window.addEventListener("message",e=>{ const d=e.data||{};   // sync progress if the deck reports back
+  if(d.type==="holos-state" && typeof d.cur==="number" && deckMode==="deck"){ curSlide=d.cur; updateProgress(); } });
+
+/* transport + settings wiring */
+$("#playBtn").onclick =()=>{ if(!pOn) present(); else if(paused) resumePresent(); else pausePresent(); };
+$("#nextBtn").onclick = nextSlide;
+$("#prevBtn").onclick = prevSlide;
+$("#restartBtn").onclick = present;
+$("#muteBtn").onclick =()=>{ muted=!muted; $("#muteBtn").classList.toggle("on",muted);
+  $("#muteBtn").textContent=muted?"🔇":"🔊"; if(muted && synth) synth.cancel(); };
+$("#themeBtn").onclick =()=>{ const on=document.documentElement.classList.toggle("speakx");
+  $("#themeBtn").textContent = on ? "🎨 White" : "🎨 SpeakX"; };
+window.addEventListener("keydown",e=>{
+  if(e.target && /^(INPUT|SELECT|TEXTAREA)$/.test(e.target.tagName)) return;
+  if(e.key===" "){ e.preventDefault(); $("#playBtn").click(); }
+  else if(e.key==="ArrowRight"){ e.preventDefault(); nextSlide(); }
+  else if(e.key==="ArrowLeft"){ e.preventDefault(); prevSlide(); }
+});
+window.addEventListener("resize",()=>{ if(pOn && !paused && curBeat && !curBeat.aura) focusTarget(curBeat.target); });
+window.addEventListener("beforeunload",()=>{ if(synth) synth.cancel(); });
+
+/* ===== Ask Zivon — listen + answer from the Aura deck (no external services) ===== */
+const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
+let recog=null, listening=false;
+
+/* intents matched against the question; each maps to a spoken answer (+ optional slide to jump to) */
+const QA=[
+  {k:["what is aura","whats aura","what's aura","what is this","about aura","explain","tell me about","what does it"], s:"happy", slide:2,
+   a:"Aura connects your whole company into one conversation — ask, summarise, and act, all in one place, and role-aware."},
+  {k:["problem","pain","why","disconnect","scattered","fragment","tabs","fifteen","stall","pilots"], s:"curious", slide:1,
+   a:"Today work is disconnected — fifteen tabs, lost context, and ninety-five percent of A-I pilots stall. Aura connects it all into one place."},
+  {k:["connect","connection","wired","link","network","the field","dots","together","mean"], s:"present", slide:6,
+   a:"Connection is the whole point. Aura's core is an operating graph — people, services, policies and metrics, all wired together by events, time and permissions."},
+  {k:["glean","search","competitor","different","better than","versus"," vs ","compare"], s:"happy", slide:5,
+   a:"Search is a library; Aura is the operator. It doesn't just point to an answer — it connects that answer to the next approved action."},
+  {k:["moat","operating graph","graph","defensib","core","centre","center","hub"], s:"present", slide:6,
+   a:"The heart of Aura is the operating graph — everything connected by events, time and permissions, so it answers relationship and change questions a search box can't."},
+  {k:["capabilit","feature","what can it do","abilities","functions","do with"], s:"present", slide:4,
+   a:"Aura can Know, Assist, Do the work, Notify, keep Trust with access controls, and Speak — every action connected in one place."},
+  {k:["secur","access","permission","rbac","role","safe","privacy","approval","sign off","sign-off","audit","guardrail"], s:"present", slide:4,
+   a:"Connections respect permissions: it's role-based, sensitive data is gated, and critical actions need your sign-off — with a full audit log."},
+  {k:["voice","language","hinglish","multilingual","accent","hey aura"], s:"happy", slide:4,
+   a:"Yes — Aura supports voice and is multilingual, including Hinglish. Just say: Hey Aura."},
+  {k:["tech","feasib","stack","how does it work","how is it built","architecture","engineer","flutter","graph database","build it","icon"], s:"present", slide:8,
+   a:"It's a thin app over Zivon's brain — a graph plus vector search connects everything, with role-based access and a code runtime. Most of it is already built."},
+  {k:["pull request"," pr ","does the work","sub-agent","subagent","automate","take action","execute","open a pr"], s:"happy", slide:4,
+   a:"Aura connects answers to actions — it can spawn sub-agents to investigate and even open pull requests, all behind your approval."},
+  {k:["phase","roadmap","timeline","when","ship","plan","milestone","launch"], s:"present", slide:10,
+   a:"Four phases: an assistant and the graph, then the agents, then proactive with voice — and finally, Aura Studio."},
+  {k:["studio","platform","build your own","make your own","customis","customiz"], s:"happy", slide:11,
+   a:"Aura Studio is the platform phase — every team builds their own Aura, connecting their own tools, data and policies."},
+  {k:["envoy","today","current","already","what exists"], s:"talk", slide:7,
+   a:"Today Envoy builds and opens pull requests; Aura connects that power to everyone — mobile, the graph, guardrails, every team."},
+  {k:["demo","try it","in your hand","prototype","show me","see it"], s:"happy", slide:12,
+   a:"There's a live demo on the last slide — Aura, connected, right in your hand. Tap the chips to see real flows."},
+  {k:["who are you","your name","zivon","what are you"], s:"hello",
+   a:"I'm Zivon — and Aura is how I connect everything into one conversation. Ask me anything."},
+  {k:["hi","hello","hey there","yo "], s:"hello",
+   a:"Hi there! Ask me anything about Aura."},
+  {k:["thank","thanks","great","cool","awesome","nice","beautiful","love it"], s:"happy",
+   a:"You're welcome! Connection, at the core — that's Aura."},
+];
+const FALLBACK={ s:"curious",
+  a:"Good question! Aura connects your whole company into one conversation. Ask me what it is, how it connects everything, the operating graph, security, the tech, or the roadmap." };
+function matchAnswer(q){
+  const s=" "+q.toLowerCase()+" "; let best=null, score=0;
+  for(const e of QA){ let sc=0; for(const k of e.k){ if(s.indexOf(k)>=0) sc += (k.length>6?2:1); }
+    if(sc>score){ score=sc; best=e; } }
+  const e=best||FALLBACK; return {text:e.a, s:e.s, slide:e.slide};
+}
+
+/* speak a single line (halts the auto-presentation, then returns to idle) */
+function say(text, state){
+  gen++; pOn=false; paused=false; clearTimeout(pTimer); if(synth) synth.cancel();
+  clearPointer(); setPlay("idle");
+  setState(state||"present"); setMouth("talk"); speaking=true; bubble(text);
+  const start=Date.now(), minMs=900+text.length*38; let done=false;
+  const end=()=>{ if(done) return; done=true; setTimeout(()=>{ speaking=false; setState("idle"); }, Math.max(0, minMs-(Date.now()-start))); };
+  if(synth){ try{ synth.cancel(); const u=new SpeechSynthesisUtterance(text);
+    const v=pickVoice(); if(v) u.voice=v; u.rate=(+($("#rate")&&$("#rate").value))||1; u.pitch=1.12; u.volume=1;
+    u.onboundary=()=>{ speakPulse=1; }; u.onend=end; u.onerror=end; synth.speak(u); }catch(e){} }
+  setTimeout(end, minMs+5000);
+}
+function answerQuestion(q){
+  q=(q||"").trim(); if(!q) return;
+  if(recog){ try{ recog.stop(); }catch(e){} } listening=false; $("#micBtn").classList.remove("on");
+  const a=matchAnswer(q); say(a.text, a.s); if(a.slide!=null) ensureDeck(gen, ()=> deckGo(a.slide));
+}
+function startListen(){
+  if(!SR){ say("Your browser doesn't support voice input — just type your question in the box.", "sad"); return; }
+  if(listening){ try{ recog.stop(); }catch(e){} return; }
+  gen++; pOn=false; clearTimeout(pTimer); if(synth) synth.cancel();    // pause the show while listening
+  try{
+    recog=new SR(); recog.lang="en-US"; recog.interimResults=false; recog.maxAlternatives=1;
+    recog.onresult=e=>{ const tx=e.results[0][0].transcript; const ai=$("#askInput"); if(ai) ai.value=tx; answerQuestion(tx); };
+    recog.onerror=ev=>{ listening=false; $("#micBtn").classList.remove("on");
+      if(ev.error==="not-allowed"||ev.error==="service-not-allowed"){ say("I need microphone permission to listen — you can also type your question.", "sad"); }
+      else { setState("idle"); bubble(""); } };
+    recog.onend=()=>{ listening=false; $("#micBtn").classList.remove("on"); };
+    recog.start(); listening=true; $("#micBtn").classList.add("on");
+    setState("curious"); setMouth("hidden"); bubble("Listening… ask me anything about Aura.");
+  }catch(e){ listening=false; $("#micBtn").classList.remove("on"); }
+}
+$("#askBtn").onclick=()=> answerQuestion($("#askInput").value);
+$("#askInput").addEventListener("keydown",e=>{ if(e.key==="Enter"){ e.preventDefault(); answerQuestion($("#askInput").value); } });
+$("#micBtn").onclick=startListen;
+
+/* ---- boot ---- */
+setState("idle"); scheduleBlink(); requestAnimationFrame(loop);
+$("#bubble").textContent="Hi! I'll walk you through Aura…"; $("#bubble").classList.add("show");
+setTimeout(()=>setState("hello"), 500);
+/* auto-start once the deck is ready (captions always run; voice plays if the browser allows) */
+let _started=false; const autoStart=()=>{ if(_started||pOn) return; _started=true; present(); };
+deck.addEventListener("load",()=> setTimeout(autoStart, 900));
+setTimeout(autoStart, 4000);   // fallback if the load event already fired
+</script>
+</body>
+</html>

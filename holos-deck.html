@@ -1,0 +1,512 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Holos — the company, in one conversation</title>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,500;12..96,700;12..96,800&family=Hanken+Grotesque:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet" />
+<script src="https://unpkg.com/lucide@latest"></script>
+<style>
+  :root{
+    --bg:#0a0807; --bg2:#0e0b09;
+    --fg:#f5efe8; --fg-dim:#cdc4ba; --muted:#928779; --muted2:#5f574d;
+    --ember:#f2711c; --ember2:#fb8c3c; --ember3:#ea580c; --amber:#fbbf24;
+    --line:#241e18; --line-soft:#191410; --card:#15110d; --card2:#1c1611;
+    --ember-soft:rgba(242,113,28,.12); --ember-line:rgba(242,113,28,.32);
+    --good:#43d6a0; --bad:#f0625a;
+    --disp:"Bricolage Grotesque",sans-serif; --body:"Hanken Grotesque",sans-serif; --mono:"JetBrains Mono",monospace;
+  }
+  *{box-sizing:border-box;margin:0;padding:0;}
+  html,body{height:100%;overflow:hidden;}
+  body{
+    font-family:var(--body);color:var(--fg);-webkit-font-smoothing:antialiased;
+    background:var(--bg); position:relative;
+  }
+  /* atmosphere */
+  .bg{position:fixed;inset:0;z-index:0;overflow:hidden;}
+  .bg .glow{position:absolute;border-radius:50%;filter:blur(80px);opacity:.5;}
+  .bg .g1{width:60vw;height:60vw;left:-10vw;top:-20vw;background:radial-gradient(circle,rgba(242,113,28,.32),transparent 70%);animation:float1 18s ease-in-out infinite;}
+  .bg .g2{width:50vw;height:50vw;right:-12vw;bottom:-18vw;background:radial-gradient(circle,rgba(234,88,14,.24),transparent 70%);animation:float2 22s ease-in-out infinite;}
+  .bg .grid{position:absolute;inset:0;background-image:linear-gradient(rgba(255,255,255,.025) 1px,transparent 1px),linear-gradient(90deg,rgba(255,255,255,.025) 1px,transparent 1px);background-size:64px 64px;mask-image:radial-gradient(circle at 50% 45%,#000,transparent 80%);}
+  .bg .grain{position:absolute;inset:0;opacity:.5;mix-blend-mode:overlay;background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='160'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='2'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='0.5'/%3E%3C/svg%3E");}
+  @keyframes float1{0%,100%{transform:translate(0,0) scale(1);}50%{transform:translate(6vw,4vw) scale(1.1);}}
+  @keyframes float2{0%,100%{transform:translate(0,0) scale(1);}50%{transform:translate(-5vw,-3vw) scale(1.08);}}
+
+  /* deck chrome */
+  .chrome{position:fixed;inset:0;z-index:10;pointer-events:none;}
+  .brand{position:absolute;top:26px;left:34px;display:flex;align-items:center;gap:10px;font-family:var(--disp);font-weight:800;font-size:17px;letter-spacing:-.01em;}
+  .brand .b-orb{width:20px;height:20px;border-radius:50%;background:radial-gradient(circle at 36% 30%,#ffe0bd,#fba14a 32%,#f2711c 62%,#c9490a 100%);box-shadow:0 0 14px rgba(242,113,28,.6);}
+  .brand small{font-family:var(--mono);font-weight:400;font-size:10px;color:var(--muted2);letter-spacing:.05em;margin-left:2px;}
+  .counter{position:absolute;top:28px;right:34px;font-family:var(--mono);font-size:12px;color:var(--muted);}
+  .counter b{color:var(--fg);}
+  .nav{position:absolute;bottom:26px;left:50%;transform:translateX(-50%);display:flex;align-items:center;gap:9px;pointer-events:auto;}
+  .dot{width:7px;height:7px;border-radius:50%;background:#3a322a;cursor:pointer;transition:all .3s;border:none;padding:0;}
+  .dot.on{background:var(--ember);width:22px;border-radius:4px;box-shadow:0 0 10px rgba(242,113,28,.6);}
+  .arrows{position:absolute;bottom:20px;right:30px;display:flex;gap:8px;pointer-events:auto;}
+  .arr{width:38px;height:38px;border-radius:11px;border:1px solid var(--line);background:rgba(20,16,12,.7);color:var(--fg-dim);cursor:pointer;display:grid;place-items:center;backdrop-filter:blur(6px);transition:all .15s;}
+  .arr:hover{border-color:var(--ember-line);color:var(--fg);}
+  .arr svg{width:18px;height:18px;}
+  .rail{position:absolute;top:0;left:0;height:2px;background:linear-gradient(90deg,var(--ember3),var(--ember2),var(--amber));box-shadow:0 0 12px rgba(242,113,28,.7);transition:width .5s cubic-bezier(.2,.8,.2,1);z-index:11;}
+
+  /* slides */
+  .stage{position:relative;z-index:5;height:100%;}
+  .slide{position:absolute;inset:0;display:flex;flex-direction:column;justify-content:center;padding:7vh 8vw;opacity:0;visibility:hidden;transform:scale(.985) translateY(8px);transition:opacity .5s ease,transform .55s cubic-bezier(.2,.8,.2,1),visibility .5s;}
+  .slide.active{opacity:1;visibility:visible;transform:none;}
+  .r{opacity:0;transform:translateY(16px);}
+  .slide.active .r{animation:rin .7s cubic-bezier(.2,.8,.2,1) forwards;animation-delay:calc(var(--i,0)*.075s + .1s);}
+  @keyframes rin{to{opacity:1;transform:none;}}
+
+  .kicker{font-family:var(--mono);font-size:12px;letter-spacing:.22em;text-transform:uppercase;color:var(--ember2);margin-bottom:18px;display:flex;align-items:center;gap:10px;}
+  .kicker::before{content:"";width:26px;height:1px;background:var(--ember);display:inline-block;}
+  h1{font-family:var(--disp);font-weight:800;line-height:.98;letter-spacing:-.03em;}
+  h2{font-family:var(--disp);font-weight:700;font-size:clamp(30px,4.6vw,58px);line-height:1.02;letter-spacing:-.025em;}
+  .lead{font-size:clamp(16px,1.5vw,21px);color:var(--fg-dim);line-height:1.55;max-width:760px;}
+  .em{color:var(--ember2);} .emw{color:#fff;font-weight:600;}
+
+  ul.points{list-style:none;display:flex;flex-direction:column;gap:14px;margin-top:30px;}
+  ul.points li{display:flex;align-items:flex-start;gap:14px;font-size:clamp(15px,1.45vw,19px);color:var(--fg-dim);line-height:1.4;max-width:820px;}
+  ul.points li .ic{width:30px;height:30px;border-radius:9px;background:var(--ember-soft);border:1px solid var(--ember-line);color:var(--ember2);display:grid;place-items:center;flex:0 0 auto;margin-top:1px;}
+  ul.points li .ic svg{width:16px;height:16px;}
+  ul.points li b{color:var(--fg);font-weight:600;}
+
+  .mono-tag{font-family:var(--mono);font-size:11px;color:var(--muted);letter-spacing:.04em;}
+
+  /* cover */
+  .cover{align-items:center;justify-content:center;text-align:center;}
+  .logo-stage{position:relative;width:210px;height:210px;margin-bottom:30px;display:grid;place-items:center;perspective:620px;}
+  .logo-stage > *{grid-area:1/1;}
+  .logo-stage .c-orb{width:128px;height:128px;border-radius:50%;position:relative;z-index:3;
+    background:radial-gradient(circle at 36% 30%,#ffe7c8,#fba14a 28%,#f2711c 56%,#c9490a 100%);
+    box-shadow:0 0 100px rgba(242,113,28,.55),inset 0 0 46px rgba(255,200,150,.5);animation:breathe 4s ease-in-out infinite;}
+  .logo-stage .c-orb::after{content:"";position:absolute;inset:-20%;border-radius:46% 54% 60% 40%;background:radial-gradient(circle at 60% 60%,rgba(216,82,14,.85),transparent 55%);mix-blend-mode:screen;filter:blur(8px);animation:drift 9s ease-in-out infinite;}
+  .logo-stage .halo{width:178px;height:178px;border-radius:50%;z-index:2;
+    background:conic-gradient(from 0deg,transparent 0deg,rgba(242,113,28,0) 55deg,rgba(251,140,60,.55) 150deg,rgba(251,191,36,.78) 188deg,rgba(242,113,28,.25) 235deg,transparent 320deg);
+    -webkit-mask:radial-gradient(circle,transparent 56%,#000 58%,#000 70%,transparent 72%);mask:radial-gradient(circle,transparent 56%,#000 58%,#000 70%,transparent 72%);animation:rot 6s linear infinite;}
+  .logo-stage .aura{width:138px;height:138px;border-radius:50%;border:1px solid rgba(242,113,28,.5);z-index:1;animation:sonar 3.4s ease-out infinite;}
+  .logo-stage .aura.a2{animation-delay:1.7s;}
+  .logo-stage .orbit{position:relative;border-radius:50%;border:1px solid rgba(242,113,28,.3);z-index:2;}
+  .logo-stage .orbit.o1{width:196px;height:196px;animation:spin1 7s linear infinite;}
+  .logo-stage .orbit.o2{width:236px;height:236px;border-color:rgba(251,191,36,.22);animation:spin2 12s linear infinite;}
+  .logo-stage .sat{position:absolute;top:-4px;left:50%;width:8px;height:8px;border-radius:50%;background:var(--amber);box-shadow:0 0 14px var(--amber),0 0 5px #fff;transform:translateX(-50%);}
+  @keyframes breathe{0%,100%{transform:scale(1);}50%{transform:scale(1.055);}}
+  @keyframes drift{0%,100%{transform:translate(0,0) rotate(0);}50%{transform:translate(9px,-7px) rotate(30deg);}}
+  @keyframes rot{to{transform:rotate(360deg);}}
+  @keyframes sonar{0%{transform:scale(.85);opacity:.7;}100%{transform:scale(1.7);opacity:0;}}
+  @keyframes spin1{from{transform:rotateX(74deg) rotateZ(0deg);}to{transform:rotateX(74deg) rotateZ(360deg);}}
+  @keyframes spin2{from{transform:rotateX(66deg) rotateZ(0deg);}to{transform:rotateX(66deg) rotateZ(-360deg);}}
+  .cover h1{font-size:clamp(64px,15vw,200px);background:linear-gradient(110deg,#fff 16%,#fba14a 38%,#fff 50%,#f2711c 62%,#fff 84%);background-size:240% 100%;-webkit-background-clip:text;background-clip:text;color:transparent;animation:sweep 6s ease-in-out infinite;}
+  @keyframes sweep{0%,100%{background-position:0% 0;}50%{background-position:100% 0;}}
+  .cover .tag{font-family:var(--disp);font-weight:500;font-size:clamp(18px,2.4vw,30px);color:var(--fg);margin-top:18px;letter-spacing:-.02em;}
+  .cover .sub{font-size:clamp(14px,1.4vw,18px);color:var(--muted);margin-top:16px;max-width:620px;}
+  .cover .sub b{color:var(--ember2);font-weight:600;}
+  .hint{position:absolute;bottom:64px;left:50%;transform:translateX(-50%);font-family:var(--mono);font-size:11px;color:var(--muted2);letter-spacing:.1em;display:flex;align-items:center;gap:8px;animation:pulse 2.4s ease-in-out infinite;}
+  @keyframes pulse{0%,100%{opacity:.4;}50%{opacity:1;}}
+  .kbd{border:1px solid var(--line);border-radius:5px;padding:2px 7px;color:var(--fg-dim);}
+
+  /* generic two-col */
+  .cols{display:grid;grid-template-columns:1fr 1fr;gap:26px;margin-top:34px;}
+  .panel{background:linear-gradient(160deg,var(--card),rgba(21,17,13,.4));border:1px solid var(--line);border-radius:20px;padding:26px;}
+  .panel.glean{opacity:.92;}
+  .panel h3{font-family:var(--disp);font-size:21px;font-weight:700;margin-bottom:6px;display:flex;align-items:center;gap:10px;letter-spacing:-.01em;}
+  .panel .sub{font-family:var(--mono);font-size:10.5px;letter-spacing:.06em;text-transform:uppercase;margin-bottom:18px;}
+  .panel.glean h3{color:var(--fg-dim);} .panel.glean .sub{color:var(--muted2);}
+  .panel.holos{border-color:var(--ember-line);background:linear-gradient(160deg,rgba(242,113,28,.1),rgba(21,17,13,.5));box-shadow:0 24px 80px -30px rgba(242,113,28,.5);}
+  .panel.holos h3{color:var(--ember2);} .panel.holos .sub{color:var(--ember);}
+  .panel ul{list-style:none;display:flex;flex-direction:column;gap:11px;}
+  .panel li{display:flex;gap:10px;font-size:15px;color:var(--fg-dim);line-height:1.35;}
+  .panel li svg{width:15px;height:15px;flex:0 0 auto;margin-top:3px;}
+  .panel.glean li svg{color:var(--muted);} .panel.holos li svg{color:var(--ember2);}
+  .panel li b{color:var(--fg);font-weight:600;}
+
+  /* capability grid */
+  .grid3{display:grid;grid-template-columns:repeat(3,1fr);gap:16px;margin-top:32px;}
+  .cap{background:linear-gradient(160deg,var(--card),rgba(21,17,13,.3));border:1px solid var(--line);border-radius:16px;padding:20px;transition:transform .3s,border-color .3s;}
+  .cap:hover{transform:translateY(-4px);border-color:var(--ember-line);}
+  .cap .ch{display:flex;align-items:center;gap:10px;margin-bottom:10px;}
+  .cap .ci{width:34px;height:34px;border-radius:10px;background:var(--ember-soft);border:1px solid var(--ember-line);color:var(--ember2);display:grid;place-items:center;}
+  .cap .ci svg{width:17px;height:17px;}
+  .cap .ct{font-family:var(--disp);font-weight:700;font-size:17px;}
+  .cap p{font-size:13.5px;color:var(--muted);line-height:1.5;}
+  .cap p em{color:var(--fg-dim);font-style:normal;}
+
+  .big-stat{font-family:var(--disp);font-weight:800;font-size:clamp(40px,7vw,96px);line-height:1;background:linear-gradient(180deg,#fff,#f2711c);-webkit-background-clip:text;background-clip:text;color:transparent;letter-spacing:-.03em;}
+
+  /* tool chips (problem) */
+  .tools{display:flex;flex-wrap:wrap;gap:10px;margin-top:30px;max-width:760px;}
+  .tchip{display:flex;align-items:center;gap:8px;font-size:14px;color:var(--muted);background:var(--card);border:1px solid var(--line);border-radius:999px;padding:9px 15px;}
+  .tchip svg{width:15px;height:15px;color:var(--muted2);}
+
+  /* operating graph svg */
+  .graphwrap{margin-top:18px;display:flex;align-items:center;gap:40px;}
+  .ghint{display:flex;flex-direction:column;gap:12px;flex:0 0 auto;}
+  .ghint .gq{font-family:var(--mono);font-size:13px;color:var(--fg-dim);background:var(--card);border:1px solid var(--line);border-left:2px solid var(--ember);border-radius:8px;padding:9px 13px;}
+  svg .edge{stroke:var(--ember-line);stroke-width:1.5;fill:none;stroke-dasharray:5 5;animation:dash 1.4s linear infinite;}
+  @keyframes dash{to{stroke-dashoffset:-20;}}
+  svg .node{fill:var(--card2);stroke:var(--line);stroke-width:1.5;}
+  svg .node.hot{stroke:var(--ember-line);fill:rgba(242,113,28,.12);}
+  svg text{font-family:var(--mono);font-size:11px;fill:var(--fg-dim);}
+  svg text.lbl{fill:var(--muted2);font-size:9px;}
+
+  /* architecture stack */
+  .stack{display:flex;flex-direction:column;gap:10px;margin-top:26px;max-width:880px;}
+  .layer{border:1px solid var(--line);border-radius:14px;padding:15px 18px;background:linear-gradient(120deg,var(--card),rgba(21,17,13,.3));display:flex;align-items:center;gap:14px;}
+  .layer .lh{font-family:var(--disp);font-weight:700;font-size:15px;min-width:200px;display:flex;align-items:center;gap:9px;}
+  .layer .lh svg{width:16px;height:16px;color:var(--ember2);}
+  .layer .ld{font-size:13px;color:var(--muted);flex:1;}
+  .layer.client{border-color:var(--ember-line);background:linear-gradient(120deg,rgba(242,113,28,.12),rgba(21,17,13,.4));}
+  .layer .pills{display:flex;gap:7px;flex-wrap:wrap;}
+  .pill{font-family:var(--mono);font-size:10.5px;color:var(--fg-dim);background:rgba(242,113,28,.08);border:1px solid var(--ember-line);border-radius:6px;padding:3px 8px;}
+  .feas{display:flex;gap:14px;margin-top:20px;flex-wrap:wrap;}
+  .feas .fb{flex:1;min-width:240px;border-radius:12px;padding:13px 16px;font-size:13.5px;line-height:1.45;}
+  .feas .ok{background:rgba(67,214,160,.08);border:1px solid rgba(67,214,160,.3);color:var(--fg-dim);}
+  .feas .hard{background:rgba(240,98,90,.07);border:1px solid rgba(240,98,90,.28);color:var(--fg-dim);}
+  .feas b{color:var(--fg);}
+  .feas .ok .h{color:var(--good);font-weight:700;} .feas .hard .h{color:var(--bad);font-weight:700;}
+
+  /* demo slide */
+  .demo{display:grid;grid-template-columns:1.05fr .95fr;gap:30px;align-items:center;}
+  .phone-shell{justify-self:center;width:340px;height:680px;border-radius:42px;background:#000;box-shadow:0 0 0 10px #15120e,0 0 0 11px #2a231b,0 40px 90px -20px rgba(0,0,0,.8),0 0 120px -20px rgba(242,113,28,.5);overflow:hidden;position:relative;}
+  .phone-shell iframe{position:absolute;border:none;top:50%;left:50%;width:392px;height:838px;transform:translate(-50%,-50%) scale(.83);transform-origin:center;}
+  .demo .try{display:flex;flex-direction:column;gap:10px;margin-top:22px;}
+  .demo .try .t{font-family:var(--mono);font-size:13px;color:var(--fg-dim);background:var(--card);border:1px solid var(--line);border-radius:10px;padding:10px 13px;border-left:2px solid var(--ember);}
+  .demo .closing{font-family:var(--disp);font-weight:700;font-size:clamp(20px,2.2vw,30px);line-height:1.15;letter-spacing:-.02em;margin-top:8px;}
+  .demo .closing .em{color:var(--ember2);}
+
+  .footline{font-family:var(--mono);font-size:11px;color:var(--muted2);margin-top:26px;letter-spacing:.03em;}
+
+  /* phases */
+  .phases{display:grid;grid-template-columns:repeat(4,1fr);gap:14px;margin-top:32px;}
+  .phase{position:relative;background:linear-gradient(165deg,var(--card),rgba(21,17,13,.3));border:1px solid var(--line);border-radius:16px;padding:20px 18px;display:flex;flex-direction:column;gap:11px;}
+  .phase.p4{border-color:var(--ember-line);background:linear-gradient(165deg,rgba(242,113,28,.1),rgba(21,17,13,.4));box-shadow:0 24px 70px -34px rgba(242,113,28,.6);}
+  .phase .pnum{font-family:var(--mono);font-size:10.5px;color:var(--muted2);letter-spacing:.12em;}
+  .phase .ptag{align-self:flex-start;font-family:var(--mono);font-size:9px;text-transform:uppercase;letter-spacing:.08em;padding:3px 8px;border-radius:6px;border:1px solid var(--line);color:var(--muted);}
+  .phase.p1 .ptag{color:var(--good);border-color:rgba(67,214,160,.3);background:rgba(67,214,160,.08);}
+  .phase.p4 .ptag{color:var(--ember2);border-color:var(--ember-line);background:var(--ember-soft);}
+  .phase .pt{font-family:var(--disp);font-weight:700;font-size:18px;line-height:1.05;}
+  .phase ul{list-style:none;display:flex;flex-direction:column;gap:7px;}
+  .phase li{font-size:12.5px;color:var(--muted);line-height:1.4;padding-left:13px;position:relative;}
+  .phase li::before{content:"";position:absolute;left:0;top:7px;width:4px;height:4px;border-radius:50%;background:var(--ember);}
+  .phase li b{color:var(--fg-dim);font-weight:600;}
+  /* roadmap */
+  .roadmap{position:relative;display:flex;justify-content:space-between;margin-top:38px;padding:0 4px;}
+  .rrail{position:absolute;top:9px;left:3%;right:3%;height:2px;background:linear-gradient(90deg,var(--good),var(--ember2) 60%,rgba(251,191,36,.4));opacity:.55;}
+  .rstep{position:relative;flex:1;display:flex;flex-direction:column;align-items:center;gap:9px;z-index:2;text-align:center;}
+  .rstep .rdot{width:18px;height:18px;border-radius:50%;background:var(--card2);border:2px solid var(--muted2);}
+  .rstep.done .rdot{background:var(--good);border-color:var(--good);box-shadow:0 0 12px rgba(67,214,160,.5);}
+  .rstep.hot .rdot{background:var(--ember);border-color:var(--ember);animation:pulsehot 2s ease-in-out infinite;}
+  .rstep.horizon .rdot{background:transparent;border-style:dashed;border-color:var(--amber);}
+  .rstep .rl{font-size:12.5px;color:var(--fg-dim);max-width:130px;line-height:1.3;}
+  .rstep.hot .rl{color:var(--ember2);font-weight:600;}
+  .rstep small{font-family:var(--mono);font-size:9px;color:var(--muted2);text-transform:uppercase;letter-spacing:.07em;}
+  @keyframes pulsehot{0%,100%{box-shadow:0 0 14px rgba(242,113,28,.7);}50%{box-shadow:0 0 26px rgba(242,113,28,1);}}
+  @media (max-width:880px){ .cols,.demo,.grid3,.phases{grid-template-columns:1fr;} .graphwrap{flex-direction:column;align-items:flex-start;} }
+</style>
+</head>
+<body>
+<div class="bg"><div class="glow g1"></div><div class="glow g2"></div><div class="grid"></div><div class="grain"></div></div>
+<div class="rail" id="rail"></div>
+
+<div class="chrome">
+  <div class="brand"><span class="b-orb"></span> Holos <small>by Zivon</small></div>
+  <div class="counter"><b id="cnum">01</b> / <span id="ctot">10</span></div>
+  <div class="nav" id="dots"></div>
+  <div class="arrows"><button class="arr" onclick="go(cur-1)"><i data-lucide="arrow-left"></i></button><button class="arr" onclick="go(cur+1)"><i data-lucide="arrow-right"></i></button></div>
+</div>
+
+<div class="stage" id="stage">
+
+  <!-- 1 · COVER -->
+  <section class="slide cover">
+    <div class="logo-stage r" style="--i:0">
+      <div class="aura"></div><div class="aura a2"></div>
+      <div class="halo"></div>
+      <div class="orbit o1"><span class="sat"></span></div>
+      <div class="orbit o2"><span class="sat"></span></div>
+      <div class="c-orb"></div>
+    </div>
+    <h1 class="r" style="--i:1">Holos</h1>
+    <div class="tag r" style="--i:2">Your whole company. <span class="em">One conversation.</span></div>
+    <div class="sub r" style="--i:3">Envoy, unbundled from Zivon and reborn as a mobile app. <b>Ask. Summarise. Act.</b> — for everyone, from new joiner to founder.</div>
+    <div class="hint"><span class="kbd">→</span> press to begin</div>
+  </section>
+
+  <!-- 2 · PROBLEM -->
+  <section class="slide">
+    <div class="kicker r" style="--i:0">The problem</div>
+    <h2 class="r" style="--i:1">A workday is <span class="em">15 tabs.</span></h2>
+    <div class="lead r" style="--i:2" style="margin-top:18px">Answers are buried, context is lost, and nothing actually gets <em>finished</em> in one place. You hop between tools just to move a task forward.</div>
+    <div class="tools">
+      <div class="tchip r" style="--i:3"><i data-lucide="message-square"></i> Slack</div>
+      <div class="tchip r" style="--i:3"><i data-lucide="file-text"></i> Docs</div>
+      <div class="tchip r" style="--i:4"><i data-lucide="kanban"></i> Jira</div>
+      <div class="tchip r" style="--i:4"><i data-lucide="git-branch"></i> GitHub</div>
+      <div class="tchip r" style="--i:5"><i data-lucide="bar-chart-3"></i> Dashboards</div>
+      <div class="tchip r" style="--i:5"><i data-lucide="calendar"></i> Calendar</div>
+      <div class="tchip r" style="--i:6"><i data-lucide="folder"></i> Drive</div>
+    </div>
+    <div class="big-stat r" style="--i:7;margin-top:36px">95%</div>
+    <div class="mono-tag r" style="--i:8">of enterprise AI pilots stall — most just ship another search box.</div>
+  </section>
+
+  <!-- 3 · WHAT IS HOLOS -->
+  <section class="slide">
+    <div class="kicker r" style="--i:0">What it is</div>
+    <h2 class="r" style="--i:1">One chat to <span class="em">run the company.</span></h2>
+    <div class="lead r" style="--i:2">Holos is the single surface where anyone gets work done — role-aware, so you only see and do what you're allowed to.</div>
+    <div class="grid3">
+      <div class="cap r" style="--i:3"><div class="ch"><span class="ci"><i data-lucide="search"></i></span><span class="ct">Ask</span></div><p><em>Who owns DevOps? What broke yesterday? What shipped this week?</em> — answered from your live systems.</p></div>
+      <div class="cap r" style="--i:4"><div class="ch"><span class="ci"><i data-lucide="sparkles"></i></span><span class="ct">Summarise</span></div><p>Read a doc, a dashboard, a thread — Holos gives the gist and lets you act on it.</p></div>
+      <div class="cap r" style="--i:5"><div class="ch"><span class="ci"><i data-lucide="zap"></i></span><span class="ct">Act</span></div><p>Plan the day, ping a person, comment & tag, open a PR — behind your approval.</p></div>
+    </div>
+    <div class="footline r" style="--i:6">For new joiners · ICs · leads · founders — one app, everyone.</div>
+  </section>
+
+  <!-- 4 · THE SHIFT -->
+  <section class="slide">
+    <div class="kicker r" style="--i:0">The shift</div>
+    <h2 class="r" style="--i:1">Don't <span style="color:var(--muted)">tell me.</span><br/><span class="em">Do it.</span></h2>
+    <div class="lead r" style="--i:2" style="margin-top:22px">Search tools point you to the answer and stop. Holos turns context into the <span class="emw">next approved action</span> — it doesn't end at a paragraph, it moves work forward.</div>
+    <ul class="points">
+      <li class="r" style="--i:3"><span class="ic"><i data-lucide="corner-down-right"></i></span><span>"Who's the POC for DevOps?" → <b>message · schedule · see open incidents</b></span></li>
+      <li class="r" style="--i:4"><span class="ic"><i data-lucide="corner-down-right"></i></span><span>"What policies changed?" → <b>summarise impact · notify affected owners</b></span></li>
+      <li class="r" style="--i:5"><span class="ic"><i data-lucide="corner-down-right"></i></span><span>"Gateway is throwing 5xx" → <b>investigate · draft the rollback PR</b></span></li>
+    </ul>
+  </section>
+
+  <!-- 5 · WHAT IT DOES -->
+  <section class="slide">
+    <div class="kicker r" style="--i:0">Capabilities</div>
+    <h2 class="r" style="--i:1">Everything you do at work — <span class="em">in one place.</span></h2>
+    <div class="grid3" style="margin-top:26px">
+      <div class="cap r" style="--i:2"><div class="ch"><span class="ci"><i data-lucide="compass"></i></span><span class="ct">Know</span></div><p><em>Who owns what · what broke · what shipped · docs for a new joiner.</em></p></div>
+      <div class="cap r" style="--i:3"><div class="ch"><span class="ci"><i data-lucide="calendar-clock"></i></span><span class="ct">Assist</span></div><p><em>Plan my day · ping on Slack · comment & tag on a doc.</em></p></div>
+      <div class="cap r" style="--i:4"><div class="ch"><span class="ci"><i data-lucide="git-pull-request"></i></span><span class="ct">Do the work</span></div><p><em>Spawn a sub-agent → investigate → open a PR.</em></p></div>
+      <div class="cap r" style="--i:5"><div class="ch"><span class="ci"><i data-lucide="bell"></i></span><span class="ct">Notify</span></div><p><em>Someone Slacks you → reply right from the notification.</em></p></div>
+      <div class="cap r" style="--i:6"><div class="ch"><span class="ci"><i data-lucide="shield-check"></i></span><span class="ct">Trust</span></div><p><em>RBAC: sensitive data denied · critical actions need your sign-off.</em></p></div>
+      <div class="cap r" style="--i:7"><div class="ch"><span class="ci"><i data-lucide="mic"></i></span><span class="ct">Speak</span></div><p><em>"Hey Holos" — voice + multilingual (Hinglish), when you want it.</em></p></div>
+    </div>
+  </section>
+
+  <!-- 6 · WHY BETTER THAN GLEAN -->
+  <section class="slide">
+    <div class="kicker r" style="--i:0">Why it beats Glean</div>
+    <h2 class="r" style="--i:1">Glean is the <span style="color:var(--muted)">library.</span> Holos is the <span class="em">operator.</span></h2>
+    <div class="cols">
+      <div class="panel glean r" style="--i:2">
+        <h3><i data-lucide="library"></i> Glean</h3>
+        <div class="sub">Knowledge substrate</div>
+        <ul>
+          <li><i data-lucide="search"></i><span>Searches, answers, links you <b>out</b> to the tool</span></li>
+          <li><i data-lucide="plug"></i><span>Admin-defined connectors & actions</span></li>
+          <li><i data-lucide="clock"></i><span>Agents capped (~30 min, no real runtime)</span></li>
+          <li><i data-lucide="building-2"></i><span>Horizontal — bound to each vendor's stack</span></li>
+        </ul>
+      </div>
+      <div class="panel holos r" style="--i:3">
+        <h3><i data-lucide="sparkles"></i> Holos</h3>
+        <div class="sub">Company operating layer</div>
+        <ul>
+          <li><i data-lucide="git-branch"></i><span>An <b>operating graph</b>: who owns what, what changed</span></li>
+          <li><i data-lucide="corner-down-right"></i><span>Answer → <b>approved action</b>, by default</span></li>
+          <li><i data-lucide="terminal"></i><span>Real runtime — <b>spawns sub-agents, opens PRs</b></span></li>
+          <li><i data-lucide="globe"></i><span>Vendor-neutral & India-aware (voice/Hinglish)</span></li>
+        </ul>
+      </div>
+    </div>
+    <div class="footline r" style="--i:4">Honest take: Glean can even be the knowledge substrate <em>beneath</em> Holos. The moat is execution, not search.</div>
+  </section>
+
+  <!-- 7 · THE MOAT: OPERATING GRAPH -->
+  <section class="slide">
+    <div class="kicker r" style="--i:0">The moat</div>
+    <h2 class="r" style="--i:1">Not an index. An <span class="em">operating graph.</span></h2>
+    <div class="lead r" style="--i:2">People · services · repos · policies · metrics — joined by <span class="emw">events, provenance, permissions and time.</span> It answers relationship + change questions a search box can't.</div>
+    <div class="graphwrap">
+      <svg width="440" height="270" viewBox="0 0 440 270" class="r" style="--i:3">
+        <line class="edge" x1="90" y1="60" x2="220" y2="135"/>
+        <line class="edge" x1="90" y1="210" x2="220" y2="135"/>
+        <line class="edge" x1="360" y1="55" x2="232" y2="120"/>
+        <line class="edge" x1="365" y1="205" x2="235" y2="150"/>
+        <g><circle class="node" cx="90" cy="60" r="30"/><text x="90" y="58" text-anchor="middle">Abhishek</text><text class="lbl" x="90" y="100" text-anchor="middle">owns ▸</text></g>
+        <g><circle class="node hot" cx="220" cy="135" r="40"/><text x="220" y="133" text-anchor="middle">gateway</text><text class="lbl" x="220" y="147" text-anchor="middle">service</text></g>
+        <g><circle class="node" cx="90" cy="210" r="30"/><text x="90" y="208" text-anchor="middle">on-call</text></g>
+        <g><circle class="node" cx="360" cy="55" r="30"/><text x="360" y="53" text-anchor="middle">PR #1842</text><text class="lbl" x="360" y="95" text-anchor="middle">◂ changed</text></g>
+        <g><circle class="node" cx="365" cy="205" r="32"/><text x="365" y="203" text-anchor="middle">incident</text><text class="lbl" x="365" y="217" text-anchor="middle">5xx</text></g>
+      </svg>
+      <div class="ghint">
+        <div class="gq r" style="--i:4">"Who owns gateway <b>now</b>?"</div>
+        <div class="gq r" style="--i:5">"What changed before the 5xx?"</div>
+        <div class="gq r" style="--i:6">"What matters to <b>me</b> today?"</div>
+        <div class="gq r" style="--i:7">"Am I allowed to see this?"</div>
+      </div>
+    </div>
+  </section>
+
+  <!-- 8 · ENVOY TODAY vs HOLOS -->
+  <section class="slide">
+    <div class="kicker r" style="--i:0">Honest status</div>
+    <h2 class="r" style="--i:1">Today it builds. <span class="em">Holos makes it operate.</span></h2>
+    <div class="cols">
+      <div class="panel glean r" style="--i:2">
+        <h3><i data-lucide="terminal"></i> Envoy v3 — today</h3>
+        <div class="sub">PRD → code → PR · a builder's copilot</div>
+        <ul>
+          <li><i data-lucide="search"></i><span>Research — Pinecone docs/code, product graph, web</span></li>
+          <li><i data-lucide="file-text"></i><span>PRDs, personas &amp; journeys → Linear</span></li>
+          <li><i data-lucide="palette"></i><span>Design — Artisan + live Figma frames</span></li>
+          <li><i data-lucide="bar-chart-3"></i><span>Data &amp; A/B experiment analysis</span></li>
+          <li><i data-lucide="git-pull-request"></i><span>Coder → <b>code-runtime → opens PRs</b></span></li>
+        </ul>
+        <div class="mono-tag" style="margin-top:14px">text chat · web · for engineers · PMs · designers</div>
+      </div>
+      <div class="panel holos r" style="--i:3">
+        <h3><i data-lucide="sparkles"></i> Holos adds</h3>
+        <div class="sub">…for everyone — to operate the company</div>
+        <ul>
+          <li><i data-lucide="smartphone"></i><span><b>Mobile</b> surface — in everyone's hand</span></li>
+          <li><i data-lucide="git-branch"></i><span><b>Operating graph</b> — who owns what · what changed</span></li>
+          <li><i data-lucide="shield-check"></i><span><b>RBAC + approval</b> guardrails, by role</span></li>
+          <li><i data-lucide="send"></i><span><b>Assistant actions</b> — Slack ping, comment &amp; tag, Calendar</span></li>
+          <li><i data-lucide="bell"></i><span><b>Notifications</b> you reply to inline</span></li>
+          <li><i data-lucide="users"></i><span><b>Company-wide Q&amp;A</b> — ops, HR, founders, not just builders</span></li>
+        </ul>
+      </div>
+    </div>
+    <div class="footline r" style="--i:4">Same Deep-Agents brain — new body (mobile), new senses (voice &amp; notifications), new reach (every team), and a graph of how the company actually runs.</div>
+  </section>
+
+  <!-- 9 · TECHNICAL FEASIBILITY -->
+  <section class="slide">
+    <div class="kicker r" style="--i:0">Technically feasible — today</div>
+    <h2 class="r" style="--i:1">A thin app over <span class="em">Zivon's brain.</span></h2>
+    <div class="stack">
+      <div class="layer client r" style="--i:2"><div class="lh"><i data-lucide="smartphone"></i> Holos · Flutter</div><div class="ld">Thin client — chat, previews, approvals, notifications. No heavy logic.</div></div>
+      <div class="layer r" style="--i:3"><div class="lh"><i data-lucide="network"></i> Connectors → events</div><div class="ld">Slack · GitHub · Linear · Drive · Calendar · APM → append-only event log</div></div>
+      <div class="layer r" style="--i:4"><div class="lh"><i data-lucide="git-branch"></i> Operating graph + search</div><div class="pills"><span class="pill">Neo4j (graph)</span><span class="pill">vector (RAG)</span><span class="pill">temporal + provenance</span></div></div>
+      <div class="layer r" style="--i:5"><div class="lh"><i data-lucide="shield-check"></i> RBAC + approval</div><div class="ld">Verified identity · permission-scoped reads · approve criticals · audit log</div></div>
+      <div class="layer r" style="--i:6"><div class="lh"><i data-lucide="terminal"></i> Envoy v3 · Deep Agents</div><div class="pills"><span class="pill">sub-agents</span><span class="pill">code-runtime → PRs</span><span class="pill">~60% reused from Zivon</span></div></div>
+    </div>
+    <div class="feas">
+      <div class="fb ok r" style="--i:7"><span class="h">Feasible now ✓</span> &nbsp;chat + actions (Slack/Calendar/GitHub via OAuth) + <b>read-previews</b> of docs, sheets & dashboards.</div>
+      <div class="fb hard r" style="--i:8"><span class="h">Hand off ⟶</span> &nbsp;editing a tool's <b>native UI</b> in-app — don't embed it, deep-link or act via API.</div>
+    </div>
+  </section>
+
+  <!-- 9 · HOW WE WIN -->
+  <section class="slide">
+    <div class="kicker r" style="--i:0">How we win</div>
+    <h2 class="r" style="--i:1">Buy the substrate. <span class="em">Build the execution.</span></h2>
+    <div class="lead r" style="--i:2">Don't re-fight search parity. Let a commodity layer handle connectors & retrieval; spend our effort on the graph, approvals, runtime and a beautiful mobile surface.</div>
+    <ul class="points">
+      <li class="r" style="--i:3"><span class="ic"><i data-lucide="layers"></i></span><span><b>Below:</b> commodity context (Onyx-style retrieval & connectors)</span></li>
+      <li class="r" style="--i:4"><span class="ic"><i data-lucide="cpu"></i></span><span><b>Above:</b> Zivon = the operating graph + approvals + runtime</span></li>
+      <li class="r" style="--i:5"><span class="ic"><i data-lucide="rocket"></i></span><span><b>First release:</b> 4–5 sharp answer→action loops — ownership lookup · policy diffs · onboarding autopilot · plan-my-day · one "do-the-work" flow</span></li>
+    </ul>
+  </section>
+
+  <!-- 10 · PHASES -->
+  <section class="slide">
+    <div class="kicker r" style="--i:0">How we ship</div>
+    <h2 class="r" style="--i:1">Ship it in <span class="em">phases.</span></h2>
+    <div class="phases">
+      <div class="phase p1 r" style="--i:2"><span class="pnum">PHASE 1</span><span class="ptag">Now</span><div class="pt">Assistant + the graph</div>
+        <ul><li>Envoy → <b>personal assistant</b>: plan day, Slack, calendar, reminders</li><li>Build the <b>enterprise knowledge graph</b> — people · services · policies · metrics</li><li>RBAC spine + Holos mobile shell</li></ul></div>
+      <div class="phase p2 r" style="--i:3"><span class="pnum">PHASE 2</span><span class="ptag">Next</span><div class="pt">Wire the brain</div>
+        <ul><li>Connect graph + actions to <b>Envoy v3 — Deep Agents + Claude SDK</b></li><li>Answer → <b>approved action</b> loops</li><li>Sub-agents + code-runtime → open PRs</li></ul></div>
+      <div class="phase p3 r" style="--i:4"><span class="pnum">PHASE 3</span><span class="ptag">Then</span><div class="pt">Deepen &amp; go proactive</div>
+        <ul><li><b>Proactive cards</b> (what broke / alerts) + deep-research work-products</li><li>Multilingual voice + more connectors</li><li>Temporal / causal graph + an eval &amp; assurance loop</li></ul></div>
+      <div class="phase p4 r" style="--i:5"><span class="pnum">PHASE 4</span><span class="ptag">Platform</span><div class="pt">Holo Studio</div>
+        <ul><li><b>“Make your own Holos.”</b></li><li>Configurable tools, connectors &amp; custom data</li><li>Custom capabilities, approval policies &amp; personas</li></ul></div>
+    </div>
+  </section>
+
+  <!-- 11 · ROADMAP -->
+  <section class="slide">
+    <div class="kicker r" style="--i:0">The horizon</div>
+    <h2 class="r" style="--i:1">From assistant → <span class="em">the company's OS.</span></h2>
+    <div class="lead r" style="--i:2">Holo Studio turns Holos from a product into a platform — every team shapes its own. Beyond that, agents that don't just answer; they <span class="emw">own outcomes.</span></div>
+    <div class="roadmap r" style="--i:3">
+      <div class="rrail"></div>
+      <div class="rstep done"><span class="rdot"></span><div class="rl">Personal assistant + graph</div><small>now</small></div>
+      <div class="rstep"><span class="rdot"></span><div class="rl">Deep Agents · answer→action</div><small>next</small></div>
+      <div class="rstep"><span class="rdot"></span><div class="rl">Proactive · voice · research</div><small>then</small></div>
+      <div class="rstep hot"><span class="rdot"></span><div class="rl">Holo Studio — build-your-own</div><small>platform</small></div>
+      <div class="rstep horizon"><span class="rdot"></span><div class="rl">Your company's operating system</div><small>horizon</small></div>
+    </div>
+    <ul class="points" style="margin-top:30px">
+      <li class="r" style="--i:4"><span class="ic"><i data-lucide="boxes"></i></span><span><b>Capability marketplace</b> — share &amp; install Holos skills across teams</span></li>
+      <li class="r" style="--i:5"><span class="ic"><i data-lucide="target"></i></span><span><b>Agents that own outcomes</b> — "keep p95 &lt; 300ms" → it watches and acts</span></li>
+    </ul>
+  </section>
+
+  <!-- 12 · DEMO -->
+  <section class="slide">
+    <div class="demo">
+      <div>
+        <div class="kicker r" style="--i:0">Live demo</div>
+        <h2 class="r" style="--i:1">Holos, <span class="em">in your hand.</span></h2>
+        <div class="lead r" style="--i:2" style="font-size:17px">Tap the chips inside — every flow is real on screen.</div>
+        <div class="try">
+          <div class="t r" style="--i:3">“What broke in SpeakX yesterday?”</div>
+          <div class="t r" style="--i:4">“Gateway 5xx — look into it” → opens a PR</div>
+          <div class="t r" style="--i:5">“Summarise the launch doc” → comment & tag</div>
+          <div class="t r" style="--i:6">🔔 incoming Slack → reply inline · 🎙 Hey Holos</div>
+        </div>
+        <div class="closing r" style="--i:7">Glean is your knowledge.<br/><span class="em">Holos is your company, in one conversation.</span></div>
+      </div>
+      <div class="phone-shell r" style="--i:3">
+        <iframe id="demoframe" loading="lazy" title="Holos prototype"></iframe>
+      </div>
+    </div>
+  </section>
+
+</div>
+
+<script>
+  lucide.createIcons();
+  const slides=[...document.querySelectorAll('.slide')];
+  const dotsWrap=document.getElementById('dots');
+  const rail=document.getElementById('rail'), cnum=document.getElementById('cnum'), ctot=document.getElementById('ctot');
+  let cur=0;
+  ctot.textContent=String(slides.length).padStart(2,'0');
+  slides.forEach((_,i)=>{const b=document.createElement('button');b.className='dot';b.onclick=()=>go(i);dotsWrap.appendChild(b);});
+  const dots=[...dotsWrap.children];
+
+  // lazy-load the demo iframe only when reaching the last slide
+  const DEMO_URL='https://gist.githack.com/pulkit-speakX/15672937d7c9217ec235e9e2763d6d21/raw/zivonx-buddy.html';
+  let demoLoaded=false;
+
+  function go(n){
+    cur=Math.max(0,Math.min(slides.length-1,n));
+    slides.forEach((s,i)=>s.classList.toggle('active',i===cur));
+    dots.forEach((d,i)=>d.classList.toggle('on',i===cur));
+    rail.style.width=((cur+1)/slides.length*100)+'%';
+    cnum.textContent=String(cur+1).padStart(2,'0');
+    if(cur===slides.length-1 && !demoLoaded){demoLoaded=true;document.getElementById('demoframe').src=DEMO_URL;}
+  }
+  document.addEventListener('keydown',e=>{
+    if(e.key==='ArrowRight'||e.key===' '||e.key==='PageDown'){e.preventDefault();go(cur+1);}
+    else if(e.key==='ArrowLeft'||e.key==='PageUp'){e.preventDefault();go(cur-1);}
+    else if(e.key==='Home'){go(0);} else if(e.key==='End'){go(slides.length-1);}
+  });
+  /* let the Zivon presenter drive the deck via postMessage — works even under file:// */
+  window.addEventListener('message',function(e){
+    var d=e.data||{};
+    if(d.type==='holos-go'){ go((d.n|0)); if(e.source){ try{ e.source.postMessage({type:'holos-state',cur:cur,total:slides.length},'*'); }catch(_){} } }
+  });
+  go(0);
+</script>
+<style id="zivon-present-fix">
+  /* Zivon drives this deck externally via go(n); the original opacity-transition +
+     staggered .r reveal don't settle under scripted navigation, so force the active
+     slide (and its content) fully visible. Local presenter copy only — the public
+     gist keeps its animations. */
+  .slide{transition:none !important;}
+  .slide:not(.active){opacity:0 !important; visibility:hidden !important; pointer-events:none;}
+  .slide.active{opacity:1 !important; visibility:visible !important; transform:none !important;}
+  .r{opacity:1 !important; transform:none !important; animation:none !important;}
+</style>
+</body>
+</html>

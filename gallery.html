@@ -1,0 +1,86 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>Zivon — 3D Render Gallery</title>
+<script type="module"
+  src="https://ajax.googleapis.com/ajax/libs/model-viewer/3.5.0/model-viewer.min.js"></script>
+<style>
+  :root{--accent:#34f5c8;--eye:#27e0ff;--txt:#dce8ff;--muted:#7f93bd;--stroke:rgba(120,180,255,.18);}
+  *{box-sizing:border-box;}
+  body{margin:0;font-family:"Segoe UI",system-ui,sans-serif;color:var(--txt);
+    background:radial-gradient(1100px 700px at 50% -10%,#16234a,transparent 60%),
+      linear-gradient(180deg,#070b16,#0b1322 60%,#05080f);min-height:100vh;}
+  header{text-align:center;padding:34px 16px 6px;}
+  h1{margin:0;font-size:30px;letter-spacing:.22em;
+    background:linear-gradient(90deg,#8fdcff,#34f5c8);-webkit-background-clip:text;
+    background-clip:text;color:transparent;}
+  .sub{color:var(--muted);font-size:13px;margin-top:6px;}
+  .wrap{max-width:1080px;margin:0 auto;padding:18px;}
+  h2{font-size:12px;letter-spacing:.22em;color:var(--muted);text-transform:uppercase;
+    margin:30px 6px 14px;border-bottom:1px solid var(--stroke);padding-bottom:8px;}
+  /* live 3D viewer */
+  model-viewer{width:100%;height:440px;background:
+    radial-gradient(circle at 50% 40%,#16203c,#070b16 70%);
+    border:1px solid var(--stroke);border-radius:16px;}
+  .note{color:var(--muted);font-size:11.5px;margin:8px 6px 0;}
+  /* render grid */
+  .grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:16px;}
+  figure{margin:0;background:rgba(14,22,44,.6);border:1px solid var(--stroke);
+    border-radius:14px;overflow:hidden;transition:transform .15s,box-shadow .2s;}
+  figure:hover{transform:translateY(-4px);box-shadow:0 18px 40px rgba(0,0,0,.45);
+    border-color:rgba(52,245,200,.45);}
+  figure img{width:100%;display:block;background:#05080f;}
+  figcaption{padding:11px 14px;}
+  figcaption b{letter-spacing:.12em;text-transform:uppercase;font-size:13px;color:#cfe7ff;}
+  figcaption span{display:block;color:var(--muted);font-size:11.5px;margin-top:3px;}
+  .links{text-align:center;margin:26px 0 50px;}
+  a.btn{display:inline-block;color:var(--txt);text-decoration:none;border:1px solid var(--stroke);
+    background:rgba(46,70,128,.5);padding:11px 20px;border-radius:11px;letter-spacing:.04em;font-size:14px;}
+  a.btn:hover{border-color:var(--accent);background:rgba(52,245,200,.18);}
+</style>
+</head>
+<body>
+<header>
+  <h1>Z I V O N</h1>
+  <div class="sub">3D character · modeled in Blender · EVA-inspired, original design</div>
+</header>
+
+<div class="wrap">
+  <h2>Live 3D model — drag to orbit</h2>
+  <model-viewer src="zivon_robot.glb" alt="Zivon 3D robot"
+    camera-controls auto-rotate touch-action="pan-y"
+    exposure="1.1" shadow-intensity="1" environment-image="neutral"
+    camera-orbit="0deg 78deg 2.4m" field-of-view="30deg"></model-viewer>
+  <p class="note">Exported from Blender as glTF (.glb) with eye morph targets preserved.
+     Needs internet access to load the model-viewer component from CDN.</p>
+
+  <h2>Interaction states — rendered in Blender (EEVEE)</h2>
+  <div class="grid" id="grid"></div>
+
+  <div class="links">
+    <a class="btn" href="index.html">▶ Open the interactive HTML demo</a>
+  </div>
+</div>
+
+<script>
+const shots=[
+  ["renders/01_idle.png","Idle","calm · eyes watching, antenna pulsing"],
+  ["renders/02_happy.png","Happy","eyes scrunch into content domes · glowing smile · hands cheer"],
+  ["renders/03_curious.png","Curious","head cocks · eyes widen & angle · one hand to the chin"],
+  ["renders/04_scan.png","Scanning","eyes narrow to scan slits · hands present forward"],
+  ["renders/05_talk.png","Talking","voice equalizer bars on the visor · hands present"],
+  ["renders/06_surprise.png","Surprised","eyes go wide · open 'O' mouth ring · hands fly up"],
+  ["renders/07_sad.png","Sad","eyes downcast · brows angle in · hands lower"],
+];
+const g=document.getElementById("grid");
+for(const [src,name,desc] of shots){
+  const f=document.createElement("figure");
+  f.innerHTML=`<img src="${src}" alt="${name}" loading="lazy">
+    <figcaption><b>${name}</b><span>${desc}</span></figcaption>`;
+  g.appendChild(f);
+}
+</script>
+</body>
+</html>

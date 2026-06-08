@@ -1,0 +1,991 @@
+<!DOCTYPE html>
+<html lang="en" class="theme-orange">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Zivon (Ember) — Interactive Character Demo</title>
+<style>
+  :root{
+    --bg0:#070b16; --bg1:#0d1426; --bg2:#121d3a;
+    --eye:#27e0ff; --eye-soft:#9af4ff;
+    --accent:#34f5c8; --warn:#ff5d6c; --love:#ff5fa2;
+    --panel:rgba(14,22,44,.72); --stroke:rgba(120,180,255,.18);
+    --txt:#dce8ff; --muted:#7f93bd;
+    /* page background */
+    --pagebg1:#16234a; --pagebg2:#102a2e; --pagebg3:#05080f;
+    /* accent rgba triples (used inside rgba(... ,alpha)) */
+    --cool:120,180,255; --mint:52,245,200; --cyan:39,224,255;
+    --dust:150,200,255; --floor:39,224,255;
+    /* header wordmark */
+    --wm0:#8fdcff; --wm1:#34f5c8;
+    /* SVG body / visor / hands */
+    --body0:#ffffff; --body1:#eef3fb; --body2:#c4d2e6; --body3:#9fb1cd;
+    --bodyrim:#ffffff;
+    --visor0:#1b2334; --visor1:#0a0e18; --visor2:#04060c;
+    --sheen:#5e7bb0;
+    --hand0:#ffffff; --hand1:#e4ebf6; --hand2:#a9bad4;
+    --shellStroke:#aebccf; --seam:#bccadd; --visorBorder:#33425f;
+    --emblemDisc:#0c1322; --eyelid:#0a0e18; --handStroke:#9fb1cd; --metal:#aebfd8;
+  }
+  /* ===== SpeakX BRAND theme (orange) — speakx.in identity: bold orange + gold ===== */
+  :root.theme-orange{
+    --bg0:#1a0803; --bg1:#2a0e04; --bg2:#3d1606;
+    --eye:#facc15; --eye-soft:#ffe9a8;
+    --accent:#ff4d00; --warn:#ef4444; --love:#ff6600;
+    --panel:rgba(38,16,6,.76); --stroke:rgba(255,120,16,.22);
+    --txt:#ffe9dd; --muted:#cf9a7e;
+    --pagebg1:#5a1e04; --pagebg2:#3d1303; --pagebg3:#0a0402;
+    --cool:255,120,16; --mint:255,120,16; --cyan:255,77,0;
+    --dust:255,209,194; --floor:255,77,0;
+    --wm0:#ffb37a; --wm1:#ff4d00;
+    --body0:#ffd9c6; --body1:#ff7810; --body2:#ff4d00; --body3:#cc2500;
+    --bodyrim:#fff4f0;
+    --visor0:#2a1410; --visor1:#150805; --visor2:#0a0402;
+    --sheen:#b07a4a;
+    --hand0:#ffd9c6; --hand1:#ff7a2e; --hand2:#cc2500;
+    --shellStroke:#d23b0a; --seam:#ff7810; --visorBorder:#5a2a14;
+    --emblemDisc:#1c0a04; --eyelid:#1a0903; --handStroke:#cc2500; --metal:#ff7810;
+  }
+  /* smooth the palette swap */
+  body, .deck, button, .chip, header h1, .floor{transition:background .45s ease, color .45s ease, border-color .45s ease;}
+  *{box-sizing:border-box;}
+  html,body{height:100%;margin:0;}
+  body{
+    font-family:"Segoe UI",system-ui,-apple-system,sans-serif;
+    color:var(--txt);
+    background:
+      radial-gradient(1200px 800px at 50% -10%, var(--pagebg1) 0%, transparent 60%),
+      radial-gradient(900px 700px at 85% 110%, var(--pagebg2) 0%, transparent 55%),
+      linear-gradient(180deg,var(--bg0),var(--bg1) 55%,var(--pagebg3));
+    min-height:100%;
+    display:flex; flex-direction:column; align-items:center;
+    overflow-x:hidden;
+  }
+  /* Milky Way galaxy (canvas) sits behind everything */
+  #galaxy{position:fixed; inset:0; z-index:0; pointer-events:none; display:block;}
+  /* drifting particle field */
+  .stars{position:fixed; inset:0; z-index:0; pointer-events:none; overflow:hidden;}
+  .stars i{position:absolute; width:2px; height:2px; border-radius:50%;
+    background:rgba(var(--dust),.7); animation:rise linear infinite;}
+  @keyframes rise{from{transform:translateY(110vh) scale(.6);opacity:0}
+    10%{opacity:.8} 90%{opacity:.8} to{transform:translateY(-10vh) scale(1.1);opacity:0}}
+
+  header{z-index:2; text-align:center; margin:26px 16px 6px;}
+  header h1{margin:0; font-size:30px; letter-spacing:.22em; font-weight:700;
+    background:linear-gradient(90deg,var(--wm0),var(--wm1)); -webkit-background-clip:text;
+    background-clip:text; color:transparent;}
+  header p{margin:6px 0 0; color:var(--muted); font-size:13px; letter-spacing:.04em;}
+
+  .stage{position:relative; z-index:1; width:min(620px,94vw); margin-top:4px;}
+  /* reflective floor + glow */
+  .floor{position:absolute; left:50%; bottom:46px; transform:translateX(-50%);
+    width:300px; height:46px; border-radius:50%;
+    background:radial-gradient(ellipse at center, rgba(var(--floor),.30), rgba(var(--floor),0) 70%);
+    filter:blur(3px); z-index:0;}
+  svg{display:block; width:100%; height:auto; overflow:visible; position:relative; z-index:1;}
+
+  /* mood readout */
+  .mood{z-index:2; text-align:center; margin-top:2px; min-height:26px;}
+  .mood b{font-size:16px; letter-spacing:.14em; color:var(--eye-soft); text-transform:uppercase;}
+  .mood span{display:block; font-size:12px; color:var(--muted); margin-top:2px;}
+
+  /* control deck */
+  .deck{z-index:2; width:min(720px,94vw); margin:14px auto 40px;
+    background:var(--panel); border:1px solid var(--stroke); border-radius:18px;
+    padding:16px; backdrop-filter:blur(8px);
+    box-shadow:0 20px 60px rgba(0,0,0,.45), inset 0 1px 0 rgba(255,255,255,.04);}
+  .deck h2{margin:2px 4px 12px; font-size:12px; letter-spacing:.2em; color:var(--muted);
+    text-transform:uppercase; font-weight:600;}
+  .btns{display:grid; grid-template-columns:repeat(auto-fit,minmax(104px,1fr)); gap:9px;}
+  button{font:inherit; cursor:pointer; color:var(--txt); border-radius:11px;
+    border:1px solid var(--stroke); background:rgba(30,44,82,.55);
+    padding:11px 8px; font-size:13px; letter-spacing:.03em;
+    transition:transform .12s, background .2s, border-color .2s, box-shadow .2s;}
+  button .em{display:block; font-size:19px; margin-bottom:3px;}
+  button:hover{transform:translateY(-2px); background:rgba(46,70,128,.7);
+    border-color:rgba(var(--cool),.4);}
+  button:active{transform:translateY(0) scale(.97);}
+  button.on{background:linear-gradient(180deg,rgba(var(--mint),.28),rgba(var(--cyan),.16));
+    border-color:rgba(var(--mint),.6); box-shadow:0 0 18px rgba(var(--mint),.25);}
+  .deck .row2{display:flex; gap:9px; margin-top:11px; flex-wrap:wrap; justify-content:center;}
+  .toggle{display:inline-flex; align-items:center; gap:8px; font-size:12px; color:var(--muted);
+    padding:8px 12px;}
+  .switch{width:40px;height:22px;border-radius:11px;background:rgba(80,100,150,.4);
+    position:relative; transition:background .2s; cursor:pointer; flex:0 0 auto;}
+  .switch::after{content:"";position:absolute;top:2px;left:2px;width:18px;height:18px;border-radius:50%;
+    background:#cfe0ff; transition:left .2s;}
+  .switch.on{background:var(--accent);} .switch.on::after{left:20px;}
+  .speak{display:flex;gap:9px;align-items:stretch;}
+  .speak input{flex:1;min-width:0;font:inherit;color:var(--txt);background:rgba(8,13,28,.8);
+    border:1px solid var(--stroke);border-radius:11px;padding:11px 14px;font-size:13px;
+    transition:border-color .2s;}
+  .speak input:focus{outline:none;border-color:var(--accent);}
+  .speak .speakgo{flex:0 0 auto;display:flex;align-items:center;gap:7px;padding:0 18px;font-weight:600;
+    background:linear-gradient(180deg,rgba(var(--mint),.32),rgba(var(--cyan),.18));
+    border-color:rgba(var(--mint),.6);}
+  .speak .speakgo .em{font-size:16px;margin:0;}
+  .speak .stopgo{flex:0 0 auto;padding:0 14px;color:var(--warn);font-size:12px;
+    border-color:rgba(255,93,108,.4);background:rgba(60,20,28,.4);}
+  .speak .speakgo.speaking{animation:pulseBtn .9s ease-in-out infinite;}
+  @keyframes pulseBtn{0%,100%{box-shadow:0 0 0 rgba(var(--mint),0)}50%{box-shadow:0 0 18px rgba(var(--mint),.5)}}
+  .chips{display:flex;flex-wrap:wrap;gap:7px;margin-top:10px;}
+  .chip{font:inherit;font-size:12px;padding:7px 12px;border-radius:20px;cursor:pointer;
+    background:rgba(30,44,82,.45);border:1px solid var(--stroke);color:var(--muted);transition:.15s;}
+  .chip:hover{color:var(--txt);border-color:rgba(var(--cool),.45);transform:translateY(-1px);}
+  .chip.feat{color:var(--bg0);font-weight:700;border-color:transparent;
+    background:linear-gradient(90deg,var(--eye),var(--accent));box-shadow:0 4px 16px rgba(var(--cyan),.25);}
+  .chip.feat:hover{color:var(--bg0);transform:translateY(-1px) scale(1.02);box-shadow:0 6px 20px rgba(var(--cyan),.35);}
+  .chip.feat.playing{animation:pulseBtn 1s ease-in-out infinite;}
+  .voicewrap{display:flex;align-items:center;gap:10px;margin-top:11px;font-size:12px;color:var(--muted);}
+  .voicesel{flex:1;font:inherit;font-size:12px;color:var(--txt);background:rgba(8,13,28,.8);
+    border:1px solid var(--stroke);border-radius:10px;padding:8px 10px;}
+  #mouthBars{transform-box:fill-box;transform-origin:center;}
+  .hint{text-align:center;color:var(--muted);font-size:11.5px;margin:14px 4px 0;letter-spacing:.03em;}
+
+  /* layout wrappers — default (narrow / mobile) = centered vertical stack */
+  .layout{display:flex; flex-direction:column; align-items:center; width:100%;}
+  .main{display:flex; flex-direction:column; align-items:center; width:100%;}
+
+  /* ===== DESKTOP: interaction deck on the LEFT, Zivon centred beside it ===== */
+  @media (min-width:1000px){
+    body{justify-content:flex-start;}
+    header{margin:26px 16px 4px;}
+    .layout{
+      flex-direction:row; align-items:center; justify-content:center;
+      gap:clamp(28px,4vw,72px);
+      width:100%; max-width:1340px; margin:0 auto; padding:0 28px;
+      flex:1 1 auto;                 /* fill remaining viewport height */
+    }
+    .deck{
+      order:-1;                      /* move interactions to the left */
+      width:clamp(360px,30vw,430px); margin:0; flex:0 0 auto; align-self:center;
+      max-height:calc(100vh - 88px); overflow-y:auto;   /* never push the page */
+      padding:15px;
+    }
+    .main{flex:1 1 auto; min-width:0; justify-content:center;}
+    .stage{width:min(540px,42vw); margin-top:0;}
+    .mood{margin-top:8px;}
+    /* tighter so the whole interaction panel fits a desktop screen height */
+    .deck h2{margin:2px 4px 8px;}
+    .deck h2[style]{margin-top:9px !important;}         /* the "Make Zivon speak" heading */
+    .btns{grid-template-columns:repeat(3,1fr); gap:8px;}
+    .deck button{padding:9px 8px;}
+    .deck button .em{font-size:17px; margin-bottom:2px;}
+    .deck .row2{margin-top:7px;}
+    .chips{margin-top:7px; gap:6px;}
+    .chip{padding:6px 11px;}
+    .voicewrap{margin-top:7px;}
+    .deck .hint{margin-top:7px; font-size:11px;}
+  }
+  /* keep clean stills centred even on wide windows */
+  body.shot .layout{flex-direction:column;}
+
+  /* shot mode — clean character + galaxy capture (for stills / decks) */
+  body.shot header, body.shot .mood, body.shot .deck{display:none !important;}
+  body.shot{justify-content:center;}
+  body.shot .stage{width:min(820px,94vw);margin-top:0;}
+</style>
+</head>
+<body>
+<canvas id="galaxy"></canvas>
+<div class="stars" id="stars"></div>
+
+<header>
+  <h1>Z I V O N</h1>
+  <p>an interactive robot companion · move your cursor — Zivon is watching</p>
+</header>
+
+<div class="layout">
+<div class="main">
+<div class="stage">
+  <div class="floor"></div>
+  <div id="spinRig">
+  <svg id="zivon" viewBox="0 0 460 560" aria-label="Zivon robot">
+    <defs>
+      <!-- body shading -->
+      <radialGradient id="bodyGrad" cx="38%" cy="30%" r="80%">
+        <stop offset="0%"  stop-color="var(--body0)"/>
+        <stop offset="46%" stop-color="var(--body1)"/>
+        <stop offset="78%" stop-color="var(--body2)"/>
+        <stop offset="100%" stop-color="var(--body3)"/>
+      </radialGradient>
+      <linearGradient id="bodyRim" x1="0" y1="0" x2="0" y2="1">
+        <stop offset="0%" stop-color="var(--bodyrim)" stop-opacity=".9"/>
+        <stop offset="18%" stop-color="var(--bodyrim)" stop-opacity="0"/>
+      </linearGradient>
+      <radialGradient id="visorGrad" cx="50%" cy="32%" r="75%">
+        <stop offset="0%" stop-color="var(--visor0)"/>
+        <stop offset="60%" stop-color="var(--visor1)"/>
+        <stop offset="100%" stop-color="var(--visor2)"/>
+      </radialGradient>
+      <linearGradient id="visorSheen" x1="0" y1="0" x2="0" y2="1">
+        <stop offset="0%" stop-color="var(--sheen)" stop-opacity=".55"/>
+        <stop offset="22%" stop-color="var(--sheen)" stop-opacity="0"/>
+      </linearGradient>
+      <radialGradient id="handGrad" cx="36%" cy="28%" r="85%">
+        <stop offset="0%" stop-color="var(--hand0)"/>
+        <stop offset="55%" stop-color="var(--hand1)"/>
+        <stop offset="100%" stop-color="var(--hand2)"/>
+      </radialGradient>
+      <radialGradient id="eyeGlow" cx="50%" cy="42%" r="60%">
+        <stop offset="0%" stop-color="#ffffff"/>
+        <stop offset="28%" stop-color="var(--eye-soft)"/>
+        <stop offset="100%" stop-color="var(--eye)"/>
+      </radialGradient>
+      <filter id="glow" x="-120%" y="-120%" width="340%" height="340%">
+        <feGaussianBlur stdDeviation="6" result="b"/>
+        <feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge>
+      </filter>
+      <filter id="softGlow" x="-80%" y="-80%" width="260%" height="260%">
+        <feGaussianBlur stdDeviation="9"/>
+      </filter>
+      <filter id="bodyShadow" x="-40%" y="-40%" width="180%" height="180%">
+        <feDropShadow dx="0" dy="10" stdDeviation="12" flood-color="#000" flood-opacity=".45"/>
+      </filter>
+      <clipPath id="clipL"><ellipse cx="0" cy="0" rx="18" ry="25"/></clipPath>
+      <clipPath id="clipR"><ellipse cx="0" cy="0" rx="18" ry="25"/></clipPath>
+    </defs>
+
+    <!-- ====== whole robot floats ====== -->
+    <g id="floatRig">
+
+      <!-- LEFT HAND (robot's right) -->
+      <g id="handL" class="hand">
+        <g class="handInner">
+          <path d="M0,-34 C20,-34 30,-18 30,2 C30,26 18,40 0,40
+                   C-18,40 -30,26 -30,2 C-30,-18 -20,-34 0,-34 Z"
+                fill="url(#handGrad)" stroke="var(--handStroke)" stroke-width="1.4"/>
+          <path d="M-22,-20 C-10,-30 12,-30 22,-18" fill="none"
+                stroke="#fff" stroke-width="3" stroke-linecap="round" opacity=".7"/>
+          <rect x="-15" y="14" width="30" height="6" rx="3" fill="var(--metal)"/>
+          <circle cx="0" cy="2" r="5.5" fill="var(--accent)" filter="url(#glow)"/>
+        </g>
+      </g>
+
+      <!-- RIGHT HAND (robot's left) -->
+      <g id="handR" class="hand">
+        <g class="handInner">
+          <path d="M0,-34 C20,-34 30,-18 30,2 C30,26 18,40 0,40
+                   C-18,40 -30,26 -30,2 C-30,-18 -20,-34 0,-34 Z"
+                fill="url(#handGrad)" stroke="var(--handStroke)" stroke-width="1.4"/>
+          <path d="M-22,-20 C-10,-30 12,-30 22,-18" fill="none"
+                stroke="#fff" stroke-width="3" stroke-linecap="round" opacity=".7"/>
+          <rect x="-15" y="14" width="30" height="6" rx="3" fill="var(--metal)"/>
+          <circle cx="0" cy="2" r="5.5" fill="var(--accent)" filter="url(#glow)"/>
+        </g>
+      </g>
+
+      <!-- BODY -->
+      <g id="body">
+        <!-- antenna -->
+        <g id="antenna">
+          <line x1="230" y1="120" x2="230" y2="86" stroke="var(--metal)" stroke-width="4" stroke-linecap="round"/>
+          <circle id="antTip" cx="230" cy="80" r="7" fill="var(--accent)" filter="url(#glow)"/>
+        </g>
+        <!-- egg body -->
+        <path id="shell" filter="url(#bodyShadow)"
+          d="M230,118
+             C322,118 352,210 352,300
+             C352,408 312,470 230,470
+             C148,470 108,408 108,300
+             C108,210 138,118 230,118 Z"
+          fill="url(#bodyGrad)" stroke="var(--shellStroke)" stroke-width="1.5"/>
+        <!-- top highlight -->
+        <path d="M230,118 C322,118 352,210 352,300 C352,250 320,150 230,150 C140,150 108,250 108,300 C108,210 138,118 230,118 Z"
+              fill="url(#bodyRim)"/>
+        <!-- side seam accents -->
+        <path d="M150,250 C140,320 150,390 188,440" fill="none" stroke="var(--seam)" stroke-width="2" opacity=".6"/>
+        <path d="M310,250 C320,320 310,390 272,440" fill="none" stroke="var(--seam)" stroke-width="2" opacity=".6"/>
+        <!-- chest Z emblem -->
+        <g id="emblem" transform="translate(230,392)">
+          <circle r="20" fill="var(--emblemDisc)" stroke="var(--accent)" stroke-width="1.6" opacity=".9"/>
+          <path d="M-9,-7 H9 L-9,7 H9" fill="none" stroke="var(--accent)" stroke-width="3"
+                stroke-linecap="round" stroke-linejoin="round" filter="url(#glow)"/>
+        </g>
+
+        <!-- VISOR FACE -->
+        <g id="visor" transform="translate(230,232)">
+          <ellipse rx="118" ry="86" fill="url(#visorGrad)"/>
+          <ellipse rx="118" ry="86" fill="none" stroke="var(--visorBorder)" stroke-width="2"/>
+          <ellipse cx="0" cy="-30" rx="96" ry="42" fill="url(#visorSheen)"/>
+
+          <!-- faint outer eye bloom -->
+          <ellipse id="bloomL" cx="-44" cy="-6" rx="34" ry="42" fill="var(--eye)" opacity=".22" filter="url(#softGlow)"/>
+          <ellipse id="bloomR" cx="44"  cy="-6" rx="34" ry="42" fill="var(--eye)" opacity=".22" filter="url(#softGlow)"/>
+
+          <!-- LEFT EYE -->
+          <g id="eyeL" transform="translate(-44,-6)">
+            <g id="blinkL">
+              <g clip-path="url(#clipL)">
+                <ellipse class="eyeBall" cx="0" cy="0" rx="18" ry="25" fill="url(#eyeGlow)" filter="url(#glow)"/>
+                <rect class="lidTop" x="-22" y="-58" width="44" height="33" fill="var(--eyelid)"/>
+                <rect class="lidBot" x="-22" y="25" width="44" height="33" fill="var(--eyelid)"/>
+              </g>
+              <circle class="spark" cx="-5" cy="-9" r="5" fill="#fff"/>
+            </g>
+          </g>
+          <!-- RIGHT EYE -->
+          <g id="eyeR" transform="translate(44,-6)">
+            <g id="blinkR">
+              <g clip-path="url(#clipR)">
+                <ellipse class="eyeBall" cx="0" cy="0" rx="18" ry="25" fill="url(#eyeGlow)" filter="url(#glow)"/>
+                <rect class="lidTop" x="-22" y="-58" width="44" height="33" fill="var(--eyelid)"/>
+                <rect class="lidBot" x="-22" y="25" width="44" height="33" fill="var(--eyelid)"/>
+              </g>
+              <circle class="spark" cx="-5" cy="-9" r="5" fill="#fff"/>
+            </g>
+          </g>
+
+          <!-- MOUTH -->
+          <g id="mouth" transform="translate(0,52)">
+            <!-- curved expression line (smile / frown / flat) -->
+            <path id="mouthLine" d="M-22,0 Q0,0 22,0" fill="none"
+                  stroke="var(--eye)" stroke-width="4.5" stroke-linecap="round"
+                  filter="url(#glow)" opacity="0"/>
+            <!-- talking equalizer bars -->
+            <g id="mouthBars" opacity="0">
+              <rect x="-26" y="-7" width="5" height="14" rx="2.5" fill="var(--eye)"/>
+              <rect x="-15" y="-11" width="5" height="22" rx="2.5" fill="var(--eye)"/>
+              <rect x="-3"  y="-14" width="6" height="28" rx="3" fill="var(--eye)"/>
+              <rect x="10"  y="-11" width="5" height="22" rx="2.5" fill="var(--eye)"/>
+              <rect x="21"  y="-7" width="5" height="14" rx="2.5" fill="var(--eye)"/>
+            </g>
+            <!-- surprised 'o' -->
+            <circle id="mouthO" cx="0" cy="0" r="0" fill="none" stroke="var(--eye)"
+                    stroke-width="4" filter="url(#glow)"/>
+          </g>
+        </g>
+      </g>
+    </g>
+  </svg>
+  </div><!-- /spinRig -->
+</div>
+
+<div class="mood"><b id="moodName">Booting…</b><span id="moodDesc"></span></div>
+</div><!-- /main -->
+
+<div class="deck">
+  <h2>Interactions</h2>
+  <div class="btns" id="btns"></div>
+  <div class="row2">
+    <label class="toggle">Auto-demo
+      <span class="switch" id="autoSwitch" role="switch" tabindex="0"></span>
+    </label>
+    <label class="toggle">Sound
+      <span class="switch" id="soundSwitch" role="switch" tabindex="0"></span>
+    </label>
+    <label class="toggle">Theme&nbsp;<b id="themeName" style="color:var(--eye-soft);font-weight:600">White</b>
+      <span class="switch" id="themeSwitch" role="switch" tabindex="0" title="Switch body color: white ↔ orange"></span>
+    </label>
+    <label class="toggle">Eye color
+      <input id="hue" type="range" min="0" max="360" value="190" style="accent-color:var(--accent);width:120px;">
+    </label>
+  </div>
+
+  <h2 style="margin-top:20px;">Make Zivon speak</h2>
+  <div class="speak">
+    <input id="speakText" type="text" maxlength="220"
+           placeholder="Type something for Zivon to say…"
+           value="Hi, I'm Zivon. Type anything and I'll say it out loud!"/>
+    <button id="speakBtn" class="speakgo"><span class="em">🔊</span>Speak</button>
+    <button id="stopBtn" class="stopgo" title="Stop speaking">■</button>
+  </div>
+  <div class="chips" id="chips"></div>
+  <label class="voicewrap">Voice
+    <select id="voiceSel" class="voicesel"></select>
+  </label>
+
+  <p class="hint">Eyes track your cursor · click any mood · flip the <b>Theme</b> (white ↔ SpeakX) · hit <b>▶ Play 45-sec pitch</b> to watch Zivon introduce itself.</p>
+</div>
+</div><!-- /layout -->
+
+<script>
+/* ============================================================
+   ZIVON — interactive character controller
+   Eyes / mouth / hands respond to state + cursor.
+   ============================================================ */
+const SVGNS = "http://www.w3.org/2000/svg";
+const $ = s => document.querySelector(s);
+
+/* ---- active color theme (white | orange) ---- */
+let theme = document.documentElement.classList.contains("theme-orange") ? "orange" : "white";
+let redrawGalaxy = null;   // set by the galaxy IIFE so a theme switch can repaint space
+const GALAXY = {
+  white:{ base:["#06070f","#080c1a","#04050c"],
+    cols:[[120,86,210],[64,104,214],[36,170,184],[206,86,158],[86,72,196],[150,120,230]],
+    core:["rgba(224,212,178,0.10)","rgba(176,148,212,0.05)"], milky:"208,220,255",
+    star:["255,255,255","168,196,255","255,214,170"], halo:"190,214,255" },
+  orange:{ base:["#0e0502","#1a0a04","#0a0402"],
+    cols:[[255,77,0],[230,57,0],[255,120,16],[204,37,0],[250,140,40],[150,40,8]],
+    core:["rgba(255,150,80,0.11)","rgba(230,57,0,0.05)"], milky:"255,210,180",
+    star:["255,248,238","255,190,120","255,140,80"], halo:"255,170,110" },
+};
+
+/* ---- particle field ---- */
+(function(){
+  const box = $("#stars");
+  for(let i=0;i<46;i++){
+    const s=document.createElement("i");
+    const x=Math.random()*100, dur=9+Math.random()*16, delay=-Math.random()*dur;
+    const sc=.5+Math.random()*1.6;
+    s.style.left=x+"vw"; s.style.animationDuration=dur+"s";
+    s.style.animationDelay=delay+"s"; s.style.transform=`scale(${sc})`;
+    s.style.opacity=.3+Math.random()*.5;
+    box.appendChild(s);
+  }
+})();
+
+/* ---- Milky Way galaxy background (procedural canvas) ---- */
+(function(){
+  const canvas=$("#galaxy"), ctx=canvas.getContext("2d");
+  const rnd=()=>Math.random();
+  const gauss=()=>(Math.random()+Math.random()+Math.random()+Math.random()-2)/2; // ~normal -1..1
+  function draw(){
+    const G=GALAXY[theme]||GALAXY.white;
+    const dpr=Math.min(2,window.devicePixelRatio||1);
+    const W=canvas.width=Math.floor(innerWidth*dpr);
+    const H=canvas.height=Math.floor(innerHeight*dpr);
+    canvas.style.width=innerWidth+"px"; canvas.style.height=innerHeight+"px";
+
+    // deep-space base
+    let g=ctx.createLinearGradient(0,0,0,H);
+    g.addColorStop(0,G.base[0]); g.addColorStop(.45,G.base[1]); g.addColorStop(1,G.base[2]);
+    ctx.fillStyle=g; ctx.fillRect(0,0,W,H);
+
+    // galactic band geometry (tilted diagonal)
+    const ang=-26*Math.PI/180, cx=W*0.52, cy=H*0.42;
+    const dir={x:Math.cos(ang),y:Math.sin(ang)}, nrm={x:-Math.sin(ang),y:Math.cos(ang)};
+    const band=H*0.30;
+    const P=(along,off)=>({x:cx+dir.x*along+nrm.x*off, y:cy+dir.y*along+nrm.y*off});
+
+    // nebula clouds (additive colour)
+    ctx.globalCompositeOperation="lighter";
+    const cols=G.cols;
+    for(let i=0;i<30;i++){
+      const p=P((i/29-0.5)*W*1.35+(rnd()-0.5)*W*0.08, gauss()*band*0.9);
+      const r=(0.10+rnd()*0.22)*H, c=cols[(rnd()*cols.length)|0], a=0.025+rnd()*0.05;
+      const rg=ctx.createRadialGradient(p.x,p.y,0,p.x,p.y,r);
+      rg.addColorStop(0,`rgba(${c[0]},${c[1]},${c[2]},${a})`);
+      rg.addColorStop(1,`rgba(${c[0]},${c[1]},${c[2]},0)`);
+      ctx.fillStyle=rg; ctx.beginPath(); ctx.arc(p.x,p.y,r,0,7); ctx.fill();
+    }
+    // milky luminous ribbon along the band core (the Milky Way spine)
+    for(let i=0;i<46;i++){
+      const p=P((i/45-0.5)*W*1.4, gauss()*band*0.22), r=(0.06+rnd()*0.10)*H, a=0.016+rnd()*0.024;
+      const rg=ctx.createRadialGradient(p.x,p.y,0,p.x,p.y,r);
+      rg.addColorStop(0,`rgba(${G.milky},${a})`); rg.addColorStop(1,`rgba(${G.milky},0)`);
+      ctx.fillStyle=rg; ctx.beginPath(); ctx.arc(p.x,p.y,r,0,7); ctx.fill();
+    }
+    // bright galactic core glow
+    { const p=P(-W*0.12,0), r=H*0.5, rg=ctx.createRadialGradient(p.x,p.y,0,p.x,p.y,r);
+      rg.addColorStop(0,G.core[0]); rg.addColorStop(.4,G.core[1]);
+      rg.addColorStop(1,"rgba(0,0,0,0)"); ctx.fillStyle=rg; ctx.beginPath(); ctx.arc(p.x,p.y,r,0,7); ctx.fill(); }
+
+    // dark dust lanes running through the band core
+    ctx.globalCompositeOperation="source-over";
+    for(let i=0;i<7;i++){
+      const p=P((rnd()-0.5)*W*1.2, gauss()*band*0.25), r=(0.05+rnd()*0.13)*H;
+      const rg=ctx.createRadialGradient(p.x,p.y,0,p.x,p.y,r);
+      rg.addColorStop(0,`rgba(3,4,9,${0.18+rnd()*0.16})`); rg.addColorStop(1,"rgba(3,4,9,0)");
+      ctx.fillStyle=rg; ctx.beginPath(); ctx.arc(p.x,p.y,r,0,7); ctx.fill();
+    }
+
+    // stars — dense along the band, sparse elsewhere
+    ctx.globalCompositeOperation="lighter";
+    const N=Math.min(2600,Math.floor((W*H)/(1700*dpr)));
+    for(let i=0;i<N;i++){
+      let x,y;
+      if(rnd()<0.6){ const p=P((rnd()-0.5)*W*1.4, gauss()*band*0.7); x=p.x; y=p.y; }
+      else { x=rnd()*W; y=rnd()*H; }
+      if(x<-2||x>W+2||y<-2||y>H+2) continue;
+      const size=(rnd()<0.93? rnd()*0.9+0.25 : rnd()*1.6+1.1)*dpr, b=0.35+rnd()*0.6, t=rnd();
+      ctx.fillStyle = t<0.72?`rgba(${G.star[0]},${b})` : t<0.88?`rgba(${G.star[1]},${b})` : `rgba(${G.star[2]},${b})`;
+      ctx.beginPath(); ctx.arc(x,y,size,0,7); ctx.fill();
+      if(size>1.9*dpr){ // halo on bright stars
+        const gg=ctx.createRadialGradient(x,y,0,x,y,size*5);
+        gg.addColorStop(0,`rgba(${G.halo},${b*0.45})`); gg.addColorStop(1,`rgba(${G.halo},0)`);
+        ctx.fillStyle=gg; ctx.beginPath(); ctx.arc(x,y,size*5,0,7); ctx.fill();
+      }
+    }
+    // vignette to focus on Zivon
+    ctx.globalCompositeOperation="source-over";
+    const vg=ctx.createRadialGradient(W*0.5,H*0.45,H*0.15,W*0.5,H*0.5,H*0.92);
+    vg.addColorStop(0,"rgba(0,0,0,0)"); vg.addColorStop(1,"rgba(0,0,0,0.6)");
+    ctx.fillStyle=vg; ctx.fillRect(0,0,W,H);
+  }
+  let to; window.addEventListener("resize",()=>{clearTimeout(to); to=setTimeout(draw,180);});
+  redrawGalaxy=draw;   // expose for theme switching
+  draw();
+})();
+
+/* ---- state definitions ----
+   lidTop / lidBot : 0..1 fraction of eye covered (shapes the eye)
+   rot             : per-eye rotation (deg) [left, right]
+   scale           : eye size multiplier
+   tilt            : body lean (deg)
+   mouth           : 'hidden'|'flat'|'smile'|'frown'|'o'|'talk'
+   hands           : gesture key
+*/
+const STATES = {
+  idle:     {name:"Idle",      desc:"calm · watching the world",          lidTop:.06,lidBot:.06, rot:[0,0],   scale:1,   tilt:0,  mouth:"hidden", hands:"idle",  track:1},
+  hello:    {name:"Hello!",    desc:"a friendly wave",                    lidTop:0,  lidBot:.42, rot:[0,0],   scale:1.05,tilt:-3, mouth:"smile",  hands:"wave",  track:.6},
+  happy:    {name:"Happy",     desc:"delighted to see you",               lidTop:0,  lidBot:.5,  rot:[0,0],   scale:1.05,tilt:0,  mouth:"smile",  hands:"cheer", track:.5},
+  curious:  {name:"Curious",   desc:"hmm… what is that?",                 lidTop:.1, lidBot:0,   rot:[-8,6],  scale:1.08,tilt:7,  mouth:"flat",   hands:"think", track:1},
+  scan:     {name:"Scanning",  desc:"analyzing environment",              lidTop:.55,lidBot:.55, rot:[0,0],   scale:1.15,tilt:0,  mouth:"flat",   hands:"present",track:0},
+  talk:     {name:"Talking",   desc:"sharing some thoughts",              lidTop:.05,lidBot:.1,  rot:[0,0],   scale:1,   tilt:0,  mouth:"talk",   hands:"present",track:.7},
+  surprise: {name:"Surprised", desc:"whoa! didn't expect that",           lidTop:0,  lidBot:0,   rot:[0,0],   scale:1.32,tilt:-2, mouth:"o",      hands:"up",    track:.4},
+  love:     {name:"Affection", desc:"you're the best",                    lidTop:0,  lidBot:.55, rot:[0,0],   scale:1.1, tilt:0,  mouth:"smile",  hands:"cheer", track:.4, color:330},
+  sad:      {name:"Sad",       desc:"feeling a little down",              lidTop:.42,lidBot:0,   rot:[10,-10],scale:.9,  tilt:6,  mouth:"frown",  hands:"down",  track:.8},
+  angry:    {name:"Alert",     desc:"something's not right",              lidTop:.4, lidBot:.05, rot:[18,-18],scale:1.05,tilt:-4, mouth:"flat",   hands:"clap",  track:.6, color:5},
+  sleep:    {name:"Sleep",     desc:"powering down · zzz",                lidTop:.46,lidBot:.46, rot:[0,0],   scale:.85, tilt:9,  mouth:"hidden", hands:"down",  track:0, dim:1},
+};
+
+/* ---- hand gesture transforms (CSS classes drive these) ---- */
+const HAND_CLASSES = ["g-idle","g-wave","g-cheer","g-think","g-present","g-up","g-clap","g-down"];
+const HAND_MAP = {idle:"g-idle",wave:"g-wave",cheer:"g-cheer",think:"g-think",
+                  present:"g-present",up:"g-up",clap:"g-clap",down:"g-down"};
+
+let current="idle";
+let pointer={x:0,y:0};       // -1..1 normalized
+let hue=190;
+let speaking=false, speakPulse=0, speakTimer=null, suppressBeep=false;
+
+const root = document.documentElement;
+const blinkers=[$("#blinkL"),$("#blinkR")];
+const handL=$("#handL"), handR=$("#handR");
+
+/* ---------- apply a state ---------- */
+function setState(key){
+  const s = STATES[key]; if(!s) return;
+  current=key;
+  // eye color
+  hue = (s.color!=null) ? s.color : (+($("#hue").value));
+  applyHue(hue);
+  // brightness dim for sleep
+  $("#floatRig").style.opacity = s.dim ? .82 : 1;
+
+  // eye shaping
+  for(const side of ["L","R"]){
+    const eye=$("#eye"+side);
+    const i = side==="L"?0:1;
+    eye.dataset.rot = s.rot[i];
+    eye.dataset.scale = s.scale;
+    const top=eye.querySelector(".lidTop"), bot=eye.querySelector(".lidBot");
+    top.style.transform = `translateY(${s.lidTop*50}px)`;
+    bot.style.transform = `translateY(${-s.lidBot*50}px)`;
+  }
+  // body tilt
+  $("#body").style.transform = `rotate(${s.tilt}deg)`;
+  $("#body").style.transformOrigin = "230px 300px";
+
+  // mouth
+  setMouth(s.mouth);
+
+  // hands
+  for(const h of [handL,handR]){
+    h.classList.remove(...HAND_CLASSES);
+    h.classList.add(HAND_MAP[s.hands]||"g-idle");
+  }
+
+  // readout + buttons
+  $("#moodName").textContent=s.name;
+  $("#moodDesc").textContent=s.desc;
+  document.querySelectorAll("#btns button").forEach(b=>b.classList.toggle("on",b.dataset.k===key));
+
+  beep(key);
+}
+
+function applyHue(h){
+  // accent is complementary in the white theme, warm-analogous in the orange theme
+  const lum = theme==="orange" ? 55 : 60;
+  // SpeakX: gold eyes (~#FACC15) with a bright orange (~#FF4D00) accent
+  const acc = theme==="orange" ? `hsl(${(h+330)%360} 100% 52%)` : `hsl(${(h+150)%360} 90% 60%)`;
+  root.style.setProperty("--eye",`hsl(${h} 100% ${lum}%)`);
+  root.style.setProperty("--eye-soft",`hsl(${h} 100% 82%)`);
+  root.style.setProperty("--accent",acc);
+}
+
+/* ---------- switch color theme (white ↔ orange) ---------- */
+function applyTheme(name){
+  theme = (name==="orange") ? "orange" : "white";
+  document.documentElement.classList.toggle("theme-orange", theme==="orange");
+  const def = theme==="orange" ? 48 : 190;          // default eye hue per theme (48 ≈ SpeakX gold)
+  const slider=$("#hue"); if(slider) slider.value=def;
+  // recolor eyes/accent — unless the active state forces its own hue (love/angry)
+  if(!STATES[current] || STATES[current].color==null) hue=def;
+  applyHue(hue);
+  const sw=$("#themeSwitch"), nm=$("#themeName");
+  if(sw) sw.classList.toggle("on", theme==="orange");
+  if(nm) nm.textContent = theme==="orange" ? "SpeakX" : "White";
+  if(redrawGalaxy) redrawGalaxy();                  // repaint the Milky Way warm/cool
+}
+
+/* mouth modes */
+function setMouth(mode){
+  const line=$("#mouthLine"), bars=$("#mouthBars"), o=$("#mouthO");
+  line.style.opacity=0; bars.style.opacity=0; o.setAttribute("r",0); bars.classList.remove("talking");
+  if(mode==="smile"){ line.setAttribute("d","M-24,-3 Q0,18 24,-3"); line.style.opacity=1; }
+  else if(mode==="frown"){ line.setAttribute("d","M-24,8 Q0,-12 24,8"); line.style.opacity=1; }
+  else if(mode==="flat"){ line.setAttribute("d","M-18,0 Q0,0 18,0"); line.style.opacity=.9; }
+  else if(mode==="o"){ o.setAttribute("r",13); }
+  else if(mode==="talk"){ bars.style.opacity=1; bars.classList.add("talking"); }
+}
+
+/* ---------- cursor tracking (eyes + parallax) ---------- */
+const svg=$("#zivon");
+function onMove(e){
+  const r=svg.getBoundingClientRect();
+  const cx=r.left+r.width/2, cy=r.top+r.height*0.42;
+  pointer.x=Math.max(-1,Math.min(1,(e.clientX-cx)/(r.width*0.6)));
+  pointer.y=Math.max(-1,Math.min(1,(e.clientY-cy)/(r.height*0.6)));
+}
+window.addEventListener("mousemove",onMove);
+window.addEventListener("touchmove",ev=>{if(ev.touches[0])onMove(ev.touches[0]);},{passive:true});
+
+/* ---------- animation loop ---------- */
+let t=0, gx=0, gy=0, fx=0, fy=0;
+function loop(){
+  t+=0.016;
+  const s=STATES[current];
+  const trk = s.track ?? 1;
+  // smooth gaze
+  const tgx = pointer.x*trk, tgy=pointer.y*trk;
+  gx += (tgx-gx)*0.12; gy += (tgy-gy)*0.12;
+  // parallax for body follow
+  fx += (pointer.x-fx)*0.05; fy += (pointer.y-fy)*0.05;
+
+  // float bob
+  const bob=Math.sin(t*1.4)*7, sway=Math.sin(t*0.7)*3;
+  $("#floatRig").setAttribute("transform",
+     `translate(${sway+fx*10}, ${bob}) rotate(${fx*2} 230 300)`);
+
+  // eyes: position glow + spark toward cursor, apply rot/scale
+  for(const side of ["L","R"]){
+    const eye=$("#eye"+side);
+    const baseX = side==="L"? -44:44, baseY=-6;
+    const rot=+(eye.dataset.rot||0), sc=+(eye.dataset.scale||1);
+    eye.setAttribute("transform",
+      `translate(${baseX+gx*7}, ${baseY+gy*8}) rotate(${rot}) scale(${sc})`);
+    const spark=eye.querySelector(".spark");
+    spark.setAttribute("cx", -5+gx*7);
+    spark.setAttribute("cy", -9+gy*7);
+  }
+  // bloom follows
+  $("#bloomL").setAttribute("cx",-44+gx*7); $("#bloomL").setAttribute("cy",-6+gy*8);
+  $("#bloomR").setAttribute("cx", 44+gx*7); $("#bloomR").setAttribute("cy",-6+gy*8);
+
+  // antenna tip pulse
+  const p=0.5+0.5*Math.sin(t*2.2);
+  $("#antTip").setAttribute("r",6+p*2);
+
+  // mouth speak pulse — bumped on each spoken word, decays smoothly
+  speakPulse*=0.85;
+  const mb=$("#mouthBars");
+  if(speaking){ const base=0.15+0.15*Math.abs(Math.sin(t*9)); mb.style.transform=`scaleY(${1+base+speakPulse*0.7})`; }
+  else mb.style.transform="";
+
+  // hands idle bob (counter to body)
+  const hb=Math.sin(t*1.4+Math.PI)*5;
+  handL.style.setProperty("--bob",`${hb}px`);
+  handR.style.setProperty("--bob",`${-hb}px`);
+
+  requestAnimationFrame(loop);
+}
+
+/* ---------- auto blink ---------- */
+function scheduleBlink(){
+  const wait = 1800+Math.random()*3200;
+  setTimeout(()=>{
+    if(current!=="sleep" && current!=="scan"){
+      blinkers.forEach(b=>{b.style.transform="scaleY(.08)";});
+      setTimeout(()=>blinkers.forEach(b=>{b.style.transform="scaleY(1)";}),120);
+    }
+    scheduleBlink();
+  },wait);
+}
+
+/* ---------- tiny WebAudio voice blips ---------- */
+let actx=null, soundOn=false;
+function beep(key){
+  if(!soundOn || suppressBeep) return;
+  try{
+    actx = actx || new (window.AudioContext||window.webkitAudioContext)();
+    const base = {hello:660,happy:740,curious:520,scan:880,talk:600,surprise:990,
+                  love:820,sad:300,angry:200,sleep:240,idle:480}[key]||500;
+    const n = key==="talk"?5:(key==="scan"?3:2);
+    for(let i=0;i<n;i++){
+      const o=actx.createOscillator(), g=actx.createGain();
+      o.type= key==="angry"?"sawtooth":"sine";
+      o.frequency.value=base*(1+i*0.12);
+      const ts=actx.currentTime+i*0.09;
+      g.gain.setValueAtTime(0,ts);
+      g.gain.linearRampToValueAtTime(.12,ts+0.02);
+      g.gain.exponentialRampToValueAtTime(.001,ts+0.13);
+      o.connect(g); g.connect(actx.destination);
+      o.start(ts); o.stop(ts+0.15);
+    }
+  }catch(e){}
+}
+
+/* ---------- build buttons ---------- */
+const BTN_LIST=[
+  ["idle","🟢"],["hello","👋"],["happy","😄"],["curious","🤔"],["scan","🔍"],
+  ["talk","💬"],["surprise","😮"],["love","💖"],["sad","🥲"],["angry","⚡"],["sleep","😴"]
+];
+const btns=$("#btns");
+BTN_LIST.forEach(([k,em])=>{
+  const b=document.createElement("button");
+  b.dataset.k=k; b.innerHTML=`<span class="em">${em}</span>${STATES[k].name}`;
+  b.onclick=()=>{stopPitch(); stopAuto(); setState(k);};
+  btns.appendChild(b);
+});
+
+/* ---------- auto demo ---------- */
+let autoTimer=null;
+const SEQ=["hello","happy","curious","scan","talk","surprise","love","sad","angry","idle","sleep"];
+let si=0;
+function startAuto(){
+  stopPitch();
+  $("#autoSwitch").classList.add("on");
+  const step=()=>{ setState(SEQ[si%SEQ.length]); si++; autoTimer=setTimeout(step, 3600); };
+  step();
+}
+function stopAuto(){ clearTimeout(autoTimer); autoTimer=null; $("#autoSwitch").classList.remove("on"); }
+$("#autoSwitch").onclick=()=> autoTimer? stopAuto(): startAuto();
+$("#autoSwitch").onkeydown=e=>{if(e.key==="Enter"||e.key===" ")$("#autoSwitch").click();};
+
+/* sound + hue toggles */
+$("#soundSwitch").onclick=()=>{ soundOn=!soundOn; $("#soundSwitch").classList.toggle("on",soundOn);
+  if(soundOn && !actx){try{actx=new (window.AudioContext||window.webkitAudioContext)();}catch(e){}} };
+$("#soundSwitch").onkeydown=e=>{if(e.key==="Enter"||e.key===" ")$("#soundSwitch").click();};
+$("#hue").oninput=e=>{ if(STATES[current].color==null){hue=+e.target.value; applyHue(hue);} };
+
+/* theme toggle (white ↔ orange) */
+$("#themeSwitch").onclick=()=> applyTheme(theme==="orange"?"white":"orange");
+$("#themeSwitch").onkeydown=e=>{if(e.key==="Enter"||e.key===" ")$("#themeSwitch").click();};
+
+/* ---------- speak (Web Speech API text-to-speech + lip sync) ---------- */
+let voices=[];
+const synth = ("speechSynthesis" in window) ? window.speechSynthesis : null;
+function loadVoices(){
+  if(!synth) return;
+  voices = synth.getVoices();
+  const sel=$("#voiceSel"); sel.innerHTML="";
+  voices.forEach((v,i)=>{
+    const o=document.createElement("option");
+    o.value=i; o.textContent=`${v.name} — ${v.lang}`+(v.default?" (default)":"");
+    sel.appendChild(o);
+  });
+  // prefer an English voice by default
+  const en=voices.findIndex(v=>/^en[-_]/i.test(v.lang));
+  if(en>=0) sel.value=en;
+}
+if(synth){ loadVoices(); synth.onvoiceschanged=loadVoices; }
+else { $("#voiceSel").innerHTML="<option>speech not supported — visual lip-sync only</option>"; }
+
+function endSpeak(){
+  speaking=false; speakPulse=0; clearTimeout(speakTimer); speakTimer=null;
+  $("#speakBtn").classList.remove("speaking");
+  if(current==="talk") setState("idle");
+}
+function speak(text){
+  text=(text||"").trim(); if(!text) return;
+  stopPitch(); stopAuto();
+  // visuals always run (works even if TTS audio is unavailable)
+  speaking=true; suppressBeep=true; setState("talk"); suppressBeep=false;
+  $("#speakBtn").classList.add("speaking");
+  const ms=Math.min(16000, 700+text.length*60);
+  clearTimeout(speakTimer); speakTimer=setTimeout(endSpeak, ms);
+  if(!synth) return;
+  try{
+    synth.cancel();
+    const u=new SpeechSynthesisUtterance(text);
+    const v=voices[+$("#voiceSel").value]; if(v) u.voice=v;
+    u.rate=1.0; u.pitch=1.15; u.volume=1;
+    u.onboundary=()=>{ speakPulse=1; };          // jolt mouth on each word
+    u.onend=endSpeak; u.onerror=endSpeak;
+    synth.speak(u);
+  }catch(e){ /* fall back to timed visuals */ }
+}
+function stopSpeak(){ stopPitch(); if(synth) synth.cancel(); endSpeak(); }
+
+/* ===== Zivon's performed ~45-second pitch =====
+   Each line changes EXPRESSION (eyes / hands / tilt / color) and is spoken with a
+   talking mouth; the short gap after each line reads as a breath / beat. */
+const PITCH=[
+  {s:"hello",    t:"Hi there! I'm Zivon — so glad you stopped by!",                  gap:500},
+  {s:"idle",     t:"I'm the friendly face that's always happy to greet you.",        gap:450},
+  {s:"talk",     t:"A face is what people remember — and grow to love — about a brand.", gap:600},
+  {s:"curious",  t:"And here's the magic of having a real character:",               gap:500},
+  {s:"happy",    t:"I make every moment feel personal, like a friend is right here with you.", gap:600},
+  {s:"talk",     t:"My expressions? They're a language we already share.",           gap:450},
+  {s:"surprise", t:"You read a face in a heartbeat — so we connect in an instant!",  gap:550},
+  {s:"happy",    t:"A big smile says success, warmer than any status light could.",  gap:600},
+  {s:"love",     t:"And the best part: I react to you — I light up every time you win!", gap:500},
+  {s:"sad",      t:"And whenever things feel tricky, I'm right here beside you, always.", gap:600},
+  {s:"happy",    t:"So that's me: one cheerful face, on every screen, easy to love.", gap:450},
+  {s:"hello",    t:"I'm Zivon — and this is the start of something wonderful!", gap:0},
+];
+let pitchOn=false, pitchIdx=0, pitchTimer=null;
+let celebrating=false, celebrateTimer=null;
+/* excited side-to-side shimmy — Zivon's happy dance once the pitch finishes */
+function celebrate(){
+  if(celebrating) return;
+  celebrating=true;
+  const rig=$("#spinRig");
+  suppressBeep=true; setState("happy"); suppressBeep=false;  // big grin + cheer hands
+  rig.classList.remove("excited"); void rig.offsetWidth;     // restart if needed
+  rig.classList.add("excited");
+  clearTimeout(celebrateTimer);
+  celebrateTimer=setTimeout(()=>{ rig.classList.remove("excited"); celebrating=false; setState("idle"); }, 1850);
+}
+function stopCelebrate(){
+  if(!celebrating) return;
+  clearTimeout(celebrateTimer); celebrating=false;
+  $("#spinRig").classList.remove("excited");
+}
+function stopPitch(){
+  stopCelebrate();
+  if(!pitchOn) return;
+  pitchOn=false; clearTimeout(pitchTimer); pitchTimer=null;
+  if(synth) synth.cancel();
+  speaking=false;
+  const c=$("#pitchChip"); if(c) c.classList.remove("playing");
+}
+function nextPitch(){
+  if(!pitchOn) return;
+  if(pitchIdx>=PITCH.length){ stopPitch(); celebrate(); return; }  // demo done → excited wiggle
+  const seg=PITCH[pitchIdx++];
+  suppressBeep=true; setState(seg.s); suppressBeep=false;   // expression eyes / hands / tilt
+  if(seg.theme) applyTheme(seg.theme);                       // live brand-color reveal
+  setMouth("talk"); speaking=true;                           // talking mouth layered on top
+  $("#speakText").value=seg.t;
+  const advance=()=>{
+    if(!pitchOn) return;
+    speaking=false; setMouth(STATES[seg.s].mouth);           // hold the expression during the beat
+    pitchTimer=setTimeout(nextPitch, seg.gap);
+  };
+  if(synth){
+    try{
+      synth.cancel();
+      const u=new SpeechSynthesisUtterance(seg.t);
+      const v=voices[+$("#voiceSel").value]; if(v) u.voice=v;
+      u.rate=1.0; u.pitch=1.12; u.volume=1;
+      u.onboundary=()=>{ speakPulse=1; };
+      u.onend=advance; u.onerror=advance;
+      synth.speak(u);
+    }catch(e){ pitchTimer=setTimeout(advance, 700+seg.t.length*55); }
+  } else { pitchTimer=setTimeout(advance, 700+seg.t.length*55); }  // visual-only fallback
+}
+function playPitch(){
+  if(pitchOn){ stopPitch(); setState("idle"); return; }    // click again to stop
+  stopAuto(); if(synth) synth.cancel();
+  pitchOn=true; pitchIdx=0;
+  const c=$("#pitchChip"); if(c) c.classList.add("playing");
+  nextPitch();
+}
+
+const PHRASES=[
+  "Hello there! I'm Zivon.",
+  "Scanning complete — all systems are green.",
+  "Ooh, what is that over there?",
+  "I'm so happy to see you today!",
+  "Hmm, let me think about that for a moment.",
+];
+const chipBox=$("#chips");
+// featured chip: plays the full performed pitch
+const intro=document.createElement("button");
+intro.className="chip feat"; intro.id="pitchChip"; intro.textContent="▶ Play 45-sec pitch";
+intro.title="Zivon performs a ~45-second introduction — expressions change with each line";
+intro.onclick=playPitch;
+chipBox.appendChild(intro);
+PHRASES.forEach(txt=>{
+  const c=document.createElement("button"); c.className="chip"; c.textContent=txt;
+  c.onclick=()=>{ $("#speakText").value=txt; speak(txt); };
+  chipBox.appendChild(c);
+});
+$("#speakBtn").onclick=()=>speak($("#speakText").value);
+$("#stopBtn").onclick=stopSpeak;
+$("#speakText").addEventListener("keydown",e=>{ if(e.key==="Enter") speak($("#speakText").value); });
+window.addEventListener("beforeunload",()=>{ if(synth) synth.cancel(); });
+
+/* ---------- shot mode (capture a clean still of any mood) ---------- */
+const _params=new URLSearchParams(location.search);
+const SHOT=_params.get("shot")==="1";
+const MOOD=_params.get("mood");
+if(SHOT) document.body.classList.add("shot");
+
+/* ---------- boot ---------- */
+const TQ=_params.get("theme");
+if(TQ==="orange"||TQ==="white") theme=TQ;     // ?theme= overrides the file default
+applyTheme(theme);                            // sets class, default hue, eye/accent, galaxy
+setState("idle");
+if(!SHOT) scheduleBlink();
+requestAnimationFrame(loop);
+if(SHOT && MOOD && STATES[MOOD]){ stopAuto(); setState(MOOD); }
+else { setTimeout(()=>setState("hello"),700); setTimeout(()=>setState("idle"),3200); }
+</script>
+
+<style>
+  /* transition the shaping parts */
+  #eyeL,#eyeR{transition:none;}                 /* driven per-frame */
+  .lidTop,.lidBot{transition:transform .34s cubic-bezier(.4,.0,.2,1);}
+  #blinkL,#blinkR{transition:transform .1s ease; transform-box:fill-box; transform-origin:center;}
+  #mouthLine{transition:opacity .25s, d .3s;}
+  #mouthO{transition:r .25s;}
+  #body{transition:transform .5s cubic-bezier(.34,1.4,.5,1);}
+  .lidTop,.lidBot{transform-box:view-box;}
+
+  /* hand base float (var --bob from JS) + gesture layer */
+  .handInner{transition:transform .45s cubic-bezier(.34,1.3,.5,1); transform-box:fill-box; transform-origin:center;}
+  .hand{transform-box:view-box;}
+  #handL{transform:translate(86px,300px);}
+  #handR{transform:translate(374px,300px);}
+  #handL .handInner{transform:translateY(var(--bob,0));}
+  #handR .handInner{transform:translateY(var(--bob,0));}
+
+  /* gestures (override handInner transform) */
+  .g-wave  .handInner{animation:wave 1s ease-in-out infinite;}
+  @keyframes wave{0%,100%{transform:translateY(-26px) rotate(-18deg)}50%{transform:translateY(-30px) rotate(22deg)}}
+  .g-cheer .handInner{animation:cheer .7s ease-in-out infinite;}
+  @keyframes cheer{0%,100%{transform:translateY(-34px) rotate(-12deg)}50%{transform:translateY(-46px) rotate(12deg)}}
+  #handL.g-think .handInner{transform:translate(34px,-58px) rotate(20deg);}
+  #handR.g-think .handInner{transform:translateY(8px);}
+  .g-present .handInner{transform:translateY(20px) rotate(0);}
+  #handL.g-present .handInner{transform:translate(8px,18px) rotate(-16deg);}
+  #handR.g-present .handInner{transform:translate(-8px,18px) rotate(16deg);}
+  .g-up    .handInner{transform:translateY(-54px);}
+  .g-down  .handInner{transform:translateY(30px) rotate(0);}
+  #handL.g-clap .handInner{animation:clapL .28s ease-in-out infinite;}
+  #handR.g-clap .handInner{animation:clapR .28s ease-in-out infinite;}
+  @keyframes clapL{0%,100%{transform:translate(0,-4px)}50%{transform:translate(40px,-4px)}}
+  @keyframes clapR{0%,100%{transform:translate(0,-4px)}50%{transform:translate(-40px,-4px)}}
+
+  /* talking bars */
+  #mouthBars.talking rect{animation:eq .5s ease-in-out infinite;}
+  #mouthBars.talking rect:nth-child(1){animation-delay:.0s}
+  #mouthBars.talking rect:nth-child(2){animation-delay:.12s}
+  #mouthBars.talking rect:nth-child(3){animation-delay:.06s}
+  #mouthBars.talking rect:nth-child(4){animation-delay:.18s}
+  #mouthBars.talking rect:nth-child(5){animation-delay:.09s}
+  @keyframes eq{0%,100%{transform:scaleY(.4)}50%{transform:scaleY(1.3)}}
+  #mouthBars rect{transform-box:fill-box; transform-origin:center;}
+
+  #spinRig{position:relative;}
+  /* excited side-to-side shimmy — Zivon's happy dance after the pitch (purely 2D, no flip) */
+  #spinRig.excited{animation:excite 1.8s cubic-bezier(.36,.07,.22,1) both; transform-origin:50% 72%;}
+  @keyframes excite{
+    0%   {transform:translateX(0)     rotate(0deg)  scale(1);}
+    7%   {transform:translateX(0)     rotate(0deg)  scale(1.06);}    /* excited little pop */
+    19%  {transform:translateX(-38px) rotate(-8deg) scale(1.05);}
+    32%  {transform:translateX(34px)  rotate(7deg)  scale(1.04);}
+    45%  {transform:translateX(-27px) rotate(-5deg) scale(1.03);}
+    58%  {transform:translateX(21px)  rotate(4deg)  scale(1.02);}
+    71%  {transform:translateX(-13px) rotate(-3deg) scale(1.01);}
+    84%  {transform:translateX(8px)   rotate(2deg)  scale(1.005);}
+    93%  {transform:translateX(-4px)  rotate(-1deg) scale(1);}
+    100% {transform:translateX(0)     rotate(0deg)  scale(1);}
+  }
+</style>
+</body>
+</html>

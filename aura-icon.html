@@ -1,0 +1,172 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Aura — interactive 3D icon</title>
+<style>
+  html.transp, html.transp body{background:transparent !important;}   /* ?bg=0 — blend into a host page */
+  html,body{height:100%;margin:0;background:#0a0603;overflow:hidden;
+    font-family:"Segoe UI",system-ui,-apple-system,sans-serif;}
+  #c{position:fixed;inset:0;display:block;touch-action:none;cursor:grab;}
+  #c.drag{cursor:grabbing;}
+  .cap{position:fixed;left:0;right:0;bottom:30px;text-align:center;z-index:3;color:#f4d3a8;pointer-events:none;}
+  .cap .name{font-size:13px;letter-spacing:.42em;font-weight:700;color:#ffd9a6;}
+  .cap .eq{margin-top:7px;font-family:ui-monospace,Menlo,Consolas,monospace;font-size:11px;color:#9a7a55;}
+  .cap .eq b{color:#ffb86b;}
+  .hint{position:fixed;top:18px;left:0;right:0;text-align:center;color:#7d5f3e;font-size:11.5px;letter-spacing:.05em;z-index:3;}
+  .bare .cap, .bare .hint{display:none !important;}   /* embedded mode: host page provides chrome */
+</style>
+</head>
+<body>
+<canvas id="c"></canvas>
+<div class="hint">drag to rotate · hover to radiate · click to flare</div>
+<div class="cap">
+  <div class="name">A U R A</div>
+  <div class="eq" id="eq">nested shells &nbsp;r = R·(1 + ε·<b>sin(3θ + t)</b>) &nbsp;·&nbsp; a field <b>wired to the core</b></div>
+</div>
+<script>
+/* ============================================================
+   AURA — an enveloping, breathing glow field around a core.
+   • shells : 3 Fibonacci spheres at radii 1.0 / 1.34 / 1.7,
+              counter-rotating, opacity ∝ 1/radius
+   • billow : per-point radius  r = base·(1 + ε·sin(3·θ + t))   (lumpy nimbus)
+   • breathe: global B(t) = 1 + 0.04·sin(0.6t)                  (slow swell)
+   • field  : drifting particles on slow orbits = the surrounding aura cloud
+   No libraries — pure canvas + maths.
+   ============================================================ */
+const c=document.getElementById("c"), g=c.getContext("2d");
+const TAU=Math.PI*2, GOLD=Math.PI*(3-Math.sqrt(5)), frac=x=>x-Math.floor(x);
+let HUE=36;                                 // warm gold (override with ?hue=)
+let TRANSPARENT=false;
+{ const q=new URLSearchParams(location.search); if(q.has("hue")) HUE=(+q.get("hue"))||HUE;
+  if(q.has("bare")) document.documentElement.classList.add("bare");      // hide caption/hint when embedded
+  if(q.get("bg")==="0"){ TRANSPARENT=true; document.documentElement.classList.add("transp"); } }
+
+let W,H,DPR; function resize(){DPR=Math.min(2,devicePixelRatio||1);W=innerWidth;H=innerHeight;
+  c.width=W*DPR;c.height=H*DPR;c.style.width=W+"px";c.style.height=H+"px";g.setTransform(DPR,0,0,DPR,0,0);}
+addEventListener("resize",resize);resize();
+
+/* a Fibonacci sphere; keep θ (azimuth) for the billow term */
+function sphere(n){const a=[];for(let i=0;i<n;i++){const y=1-(i/(n-1))*2,r=Math.sqrt(Math.max(0,1-y*y)),th=i*GOLD;
+  a.push({x:Math.cos(th)*r,y,z:Math.sin(th)*r,th,seed:i*0.7});}return a;}
+const SHELLS=[
+  {pts:sphere(380), r:1.00, spin: 0.16, op:1.00},
+  {pts:sphere(240), r:1.34, spin:-0.11, op:0.55},
+  {pts:sphere(150), r:1.72, spin: 0.07, op:0.30},
+];
+/* enveloping particle field — slow drifting orbits */
+const FIELD=[]; for(let i=0;i<150;i++){
+  FIELD.push({ az:Math.random()*TAU, el:Math.acos(2*Math.random()-1),
+    r:1.05+Math.random()*0.95, daz:(Math.random()-0.5)*0.12, del:(Math.random()-0.5)*0.06,
+    ph:Math.random()*TAU }); }
+
+/* glow sprite */
+const spr=document.createElement("canvas");spr.width=spr.height=64;const sg=spr.getContext("2d");
+(function(h){const q=sg.createRadialGradient(32,32,0,32,32,32);
+  q.addColorStop(0,`hsla(${h+16},100%,82%,1)`);q.addColorStop(.34,`hsla(${h},100%,60%,.5)`);
+  q.addColorStop(1,`hsla(${h},100%,50%,0)`);sg.fillStyle=q;sg.fillRect(0,0,64,64);})(HUE);
+/* lighter near-white spark (for the travelling connection points) */
+const sprL=document.createElement("canvas");sprL.width=sprL.height=64;const sl=sprL.getContext("2d");
+(function(h){const q=sl.createRadialGradient(32,32,0,32,32,32);
+  q.addColorStop(0,`hsla(${h+34},100%,97%,1)`);q.addColorStop(.4,`hsla(${h+14},100%,82%,.5)`);
+  q.addColorStop(1,`hsla(${h},100%,62%,0)`);sl.fillStyle=q;sl.fillRect(0,0,64,64);})(HUE);
+
+/* interaction */
+let yaw=0.4,pitch=-0.3,vy=0,vp=0,drag=false,lx=0,ly=0,moved=0,hot=0,hotT=0,lastFlare=-9;
+c.addEventListener("pointerdown",e=>{drag=true;lx=e.clientX;ly=e.clientY;moved=0;c.classList.add("drag");});
+addEventListener("pointermove",e=>{ if(!drag)return; const dx=e.clientX-lx,dy=e.clientY-ly;lx=e.clientX;ly=e.clientY;
+  moved+=Math.abs(dx)+Math.abs(dy); vy=dx*0.005; vp=dy*0.005; yaw+=vy; pitch=Math.max(-1.4,Math.min(1.4,pitch+vp)); });
+addEventListener("pointerup",()=>{ if(drag&&moved<6) lastFlare=performance.now()/1000; drag=false;c.classList.remove("drag"); });
+c.addEventListener("pointerenter",()=>hotT=1); c.addEventListener("pointerleave",()=>hotT=0);
+/* let a host page (the Zivon presenter) trigger a flare */
+addEventListener("message",e=>{ const d=e.data||{}; if(d.type==="aura"&&d.cmd==="flare") lastFlare=performance.now()/1000; });
+
+function frame(now){
+  const t=now/1000;
+  hot+=(hotT-hot)*0.06;
+  if(!drag){ yaw+=0.05*0.016+vy; vy*=0.93; vp*=0.93; pitch+=(Math.sin(t*0.2)*0.1-pitch)*0.004; }
+  const cx=W/2,cy=H/2, R=Math.min(W,H)*0.13;
+  const flare=Math.max(0,1-(t-lastFlare)/0.9);                 // click bloom envelope
+  const breathe=1 + 0.05*Math.sin(t*0.6) + hot*0.10 + flare*0.18;
+
+  /* bg + warm vignette (skipped in transparent mode so it blends into a host page) */
+  g.globalCompositeOperation="source-over";
+  if(TRANSPARENT){ g.clearRect(0,0,W,H); }
+  else { g.fillStyle="#0a0603"; g.fillRect(0,0,W,H);
+    let vg=g.createRadialGradient(cx,cy,R*0.3,cx,cy,Math.max(W,H)*0.65);
+    vg.addColorStop(0,`hsla(${HUE},70%,9%,.6)`);vg.addColorStop(1,"rgba(0,0,0,0)");g.fillStyle=vg;g.fillRect(0,0,W,H); }
+
+  g.globalCompositeOperation="lighter";
+
+  /* big soft aura halo (the glow field), breathing */
+  const halo=g.createRadialGradient(cx,cy,0,cx,cy,R*3.2*breathe);
+  halo.addColorStop(0,`hsla(${HUE+12},100%,60%,${0.10+0.10*hot+0.12*flare})`);
+  halo.addColorStop(.45,`hsla(${HUE},100%,52%,.05)`);halo.addColorStop(1,"rgba(0,0,0,0)");
+  g.fillStyle=halo;g.beginPath();g.arc(cx,cy,R*3.2*breathe,0,TAU);g.fill();
+
+  const cp=Math.cos(pitch),sp=Math.sin(pitch),fov=3.4;
+  function proj(x,y,z,Rr){ const cyaw=Math.cos(yaw),syaw=Math.sin(yaw);
+    let x1=x*cyaw+z*syaw, z1=-x*syaw+z*cyaw; let y2=y*cp-z1*sp, z2=y*sp+z1*cp;
+    const persp=fov/(fov-z2); return {sx:cx+x1*Rr*persp, sy:cy+y2*Rr*persp, d:(z2+1.4)/2.8, persp}; }
+
+  /* nested shells — counter-rotating, lumpy (billow), opacity ∝ 1/radius */
+  for(const sh of SHELLS){
+    const yy=yaw + sh.spin*t;                                  // each shell its own spin
+    const cyaw=Math.cos(yy),syaw=Math.sin(yy);
+    const Rr=R*sh.r*breathe;
+    for(const p of sh.pts){
+      const billow=1 + 0.06*Math.sin(3*p.th + t*0.9) + 0.03*Math.sin(p.seed+t);
+      const x=p.x*billow,y=p.y*billow,z=p.z*billow;
+      let x1=x*cyaw+z*syaw, z1=-x*syaw+z*cyaw; let y2=y*cp-z1*sp, z2=y*sp+z1*cp;
+      const persp=fov/(fov-z2), d=Math.max(0,Math.min(1,(z2+1.4)/2.8));
+      const sx=cx+x1*Rr*persp, sy=cy+y2*Rr*persp, sz=(1.2+3.6*d)*persp;
+      g.globalAlpha=(0.06+0.5*d*d)*sh.op*(0.85+0.5*hot+0.5*flare);
+      g.drawImage(spr,sx-sz/2,sy-sz/2,sz,sz);
+    }
+  }
+  g.globalAlpha=1;
+
+  /* enveloping particle field — each dot is wired to the centre, showing connection */
+  for(const f of FIELD){
+    f.az+=f.daz*0.016; f.el+=f.del*0.016*Math.sin(t*0.3+f.ph)*0.5;
+    const rr=f.r*(1+0.08*Math.sin(t*0.5+f.ph))*breathe;
+    const x=Math.sin(f.el)*Math.cos(f.az), y=Math.cos(f.el), z=Math.sin(f.el)*Math.sin(f.az);
+    const pr=proj(x*rr,y*rr,z*rr,R);
+    const d=Math.max(0,Math.min(1,pr.d));
+
+    // connection line: dot → centre — soft & light, fading out at the dot, near-white at the hub
+    const conn=0.5+0.5*Math.sin(t*1.4 + f.ph*2.3);
+    const la=(0.05+0.13*d)*(0.5+0.5*conn)*(0.7+0.7*hot+0.95*flare);
+    const lg=g.createLinearGradient(pr.sx,pr.sy,cx,cy);
+    lg.addColorStop(0,  `hsla(${HUE+26},90%,90%,0)`);            // fades out at the dot
+    lg.addColorStop(.62,`hsla(${HUE+30},92%,92%,${la*0.55})`);
+    lg.addColorStop(1,  `hsla(${HUE+38},96%,96%,${la})`);        // light, near-white at the core
+    g.globalAlpha=1; g.strokeStyle=lg; g.lineWidth=0.5+0.45*d;
+    g.beginPath(); g.moveTo(pr.sx,pr.sy); g.lineTo(cx,cy); g.stroke();
+
+    // a bright spark travelling inward along the line — a link "connecting"
+    const sp=frac(t*0.45 + f.ph);
+    const spx=pr.sx+(cx-pr.sx)*sp, spy=pr.sy+(cy-pr.sy)*sp, ss=(1.2+1.8*d)*pr.persp*(1-0.4*sp);
+    g.globalAlpha=(0.14+0.55*d)*(1-sp)*(0.65+0.7*hot+flare);
+    g.drawImage(sprL,spx-ss/2,spy-ss/2,ss,ss);
+
+    // the dot itself
+    const sz=(0.9+2.6*d)*pr.persp;
+    g.globalAlpha=(0.06+0.45*d*d)*(0.75+0.6*hot+0.6*flare);
+    g.drawImage(spr,pr.sx-sz/2,pr.sy-sz/2,sz,sz);
+  }
+  g.globalAlpha=1;
+
+  /* warm core */
+  const core=g.createRadialGradient(cx,cy,0,cx,cy,R*0.95*breathe);
+  core.addColorStop(0,`hsla(${HUE+18},100%,86%,${0.4+0.25*hot+0.3*flare})`);
+  core.addColorStop(.4,`hsla(${HUE},100%,58%,.22)`);core.addColorStop(1,"rgba(0,0,0,0)");
+  g.fillStyle=core;g.beginPath();g.arc(cx,cy,R*0.95*breathe,0,TAU);g.fill();
+
+  requestAnimationFrame(frame);
+}
+requestAnimationFrame(frame);
+</script>
+</body>
+</html>
